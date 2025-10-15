@@ -13,8 +13,8 @@ public class WebConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 // Add codespace url to allowedOrigins
-                registry.addMapping("/**")
-                        .allowedOrigins("http://localhost:3000", "http://localhost:5173", "https://localhost:8080", "https://super-duper-spoon-549wxq5qp95f445x-5173.app.github.dev")
+                registry.addMapping("/api/**")
+                        .allowedOrigins("http://localhost:3000", "http://localhost:5173", "https://super-duper-spoon-549wxq5qp95f445x-5173.app.github.dev", "https://localhost:8080")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);
