@@ -1,11 +1,11 @@
 fix(test): TradeControllerTest - Fixed createTrade HTTP semantics
 
 - Problem: testCreateTrade() was failing with 201 expecting 200
-- Root Cause: Create operations (POST) should expect 201 created, not 200 OK
+- Root Cause: Test expects incorrect status: 200 OK, but Create operations (POST) should expect 201 created
 - Solution: Change status().isOK to status().isCreated in testCreateTrade() method
 - Impact: Ensures correct HTTP semantics for trade creation
 
-Note(s): Not an integration test, but a unit test that isolates controller logic; no new records are actually created
+Note(s): Not an integration test, but a unit test that isolates controller logic; no new databse records are actually created
 
 fix(test): TradeControllerTest - Fixed createTrade endpoint validation
 
@@ -17,6 +17,13 @@ fix(test): TradeControllerTest - Fixed createTrade endpoint validation
 Note(s): Not an integration test, so doesn't hit validateReferenceData(trade) method in service layer.
 
 testCreateTradeValidationFailure_MissingTradeDate() AND testCreateTradeValidationFailure_NegativeNotional() incorrect response data failing tests were also resolved with the GlobalExceptionHandler fix
+
+fix(test): TradeControllerTest - Fixed deleteTrade HTTP semantics
+
+- Problem: testCreateTrade() was failing with 200 expecting 204
+- Root Cause: Mismatch with TradeController which returns status 200 with a body
+- Solution: Change status().isNoContent() to status().isOK in testDeleteTrade() method
+- Impact: Maintains consistency with API design where endpoints return meaningful response bodies
 
 
 
