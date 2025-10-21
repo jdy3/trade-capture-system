@@ -32,6 +32,16 @@ fix(test): TradeControllerTest - Fixed testUpdateTrade service calls
 - Solution: Updated testUpdateTrade() to mock amendTrade() rather than saveTrade() and verify amendTrade() is called
 - Impact: Ensures testUpdateTrade accurately tests the updateTrade endpoint 
 
+fix(test): TradeControllerTest - Fixed ID validation for updateTrade endpoint
 
+- Problem: testUpdateTradeIdMismatch was failing with 200 expecting 400
+- Root Cause: Controller was automatically overriding tradeDTO.tradeId with URL path parameter, making ID mismatch validation impossible
+- Solution: Added validation logic to controller method to check for null tradeId and mismatch between URL and body tradeIds before processing
+- Impact: Enables proper ID mismatch handling and maintains data integrity for the updateTrade endpoint
 
+Note(s): Prevents silent data correction issues and follows REST API best practices by rejecting incorrect data rather than auto-filling missing fields.
+
+There are other potential data integrity issues with the current approach as it silently corrects incomplete data, with no feedback to the client about the problem. REST API best practice is for missing required fields to be rejected, not auto-filled. 
+
+Recomend validation for missing IDs to be added to the controller method and service layer for trade amendment.
 
