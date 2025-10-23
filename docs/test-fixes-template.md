@@ -60,3 +60,10 @@ fix(test): TradeServiceTest - Fixed date validation error response
 - Root Cause: Test assertion had placeholder error message instead of actual business rule validation message 
 - Solution: Updated the assertEquals() assertion to expect the correct error message
 - Impact: Enables meaningful user date validation prompts for data validation in accordance with business rules
+
+fix(test): BookServiceTest - Fixed missing BookMapper mocks
+
+- Problem: testFindBookById, testFindBookByNonExistentId, testSaveBook had NullPointer errors because mapper methods returned null
+- Root Cause: The BookMapper mocks were missing - toDto() and toEntity() method calls were not mocked
+- Solution: Added BookMapper mocks for toDto() and toEntity() methods with proper return values
+- Impact: Enables comprehensive testing of BookService methods with proper DTO/Entity conversion
