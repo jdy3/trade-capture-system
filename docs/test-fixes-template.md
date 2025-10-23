@@ -45,3 +45,11 @@ There are other potential data integrity issues with the current approach as it 
 
 Recomend validation for missing IDs to be added to the controller method and service layer for trade amendment.
 
+fix(test): TradeServiceTest - Fixed incomplete/incorrect testCashflowGeneration_MonthlySchedule method
+
+- Problem: testCashflowGeneration_MonthlySchedule() was failing with <12> expecting <1>
+- Root Cause: Incomplete/missing mocks AND logical errors in testCashflowGeneration_MonthlySchedule()
+- Solution: Added missing mocks AND corrected logical errors for testCashflowGeneration_MonthlySchedule()
+- Impact: Enables proper cashflow testing
+
+Note(s): Errors for testAmendTrade_Success() AND testCreateTrade_Success() were also resolved by completeing required mocks.
