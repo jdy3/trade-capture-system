@@ -45,3 +45,18 @@ There are other potential data integrity issues with the current approach as it 
 
 Recomend validation for missing IDs to be added to the controller method and service layer for trade amendment.
 
+fix(test): TradeServiceTest - Fixed incomplete/incorrect testCashflowGeneration_MonthlySchedule method
+
+- Problem: testCashflowGeneration_MonthlySchedule() was failing with <12> expecting <1>
+- Root Cause: Incomplete/missing mocks AND logical errors in testCashflowGeneration_MonthlySchedule()
+- Solution: Added missing mocks AND corrected logical errors for testCashflowGeneration_MonthlySchedule()
+- Impact: Enables proper cashflow testing
+
+Note(s): Errors for testAmendTrade_Success() AND testCreateTrade_Success() were also resolved by completeing required mocks.
+
+fix(test): TradeServiceTest - Fixed date validation error response
+
+- Problem: testCreateTrade_InvalidDates_ShouldFail was failing with correct message <Start date cannot be before trade date> but expecting <Wrong error message>
+- Root Cause: Test assertion had placeholder error message instead of actual business rule validation message 
+- Solution: Updated the assertEquals() assertion to expect the correct error message
+- Impact: Enables meaningful user date validation prompts for data validation in accordance with business rules
