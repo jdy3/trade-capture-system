@@ -32,8 +32,8 @@ public class OpenApiConfig {
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
                         new Server()
-                                .url("http://localhost:8080")
-                                .description("Development server"),
+                                .url("https://super-duper-spoon-549wxq5qp95f445x-8080.app.github.dev")
+                                .description("Codespace server"),
                         new Server()
                                 .url("https://api.tradecapture.com")
                                 .description("Production server")))

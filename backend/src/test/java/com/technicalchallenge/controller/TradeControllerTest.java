@@ -23,6 +23,7 @@ import java.util.Optional;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -135,7 +136,7 @@ public class TradeControllerTest {
         mockMvc.perform(post("/api/trades")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(tradeDTO)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated()) // Changed from isOK() to isCreated()
                 .andExpect(jsonPath("$.tradeId", is(1001)));
 
         verify(tradeService).saveTrade(any(Trade.class), any(TradeDTO.class));
@@ -183,7 +184,7 @@ public class TradeControllerTest {
         // Given
         Long tradeId = 1001L;
         tradeDTO.setTradeId(tradeId);
-        when(tradeService.saveTrade(any(Trade.class), any(TradeDTO.class))).thenReturn(trade);
+        when(tradeService.amendTrade(eq(tradeId), any(TradeDTO.class))).thenReturn(trade); // mock amendTrade instead of saveTrade
         doNothing().when(tradeService).populateReferenceDataByName(any(Trade.class), any(TradeDTO.class));
 
         // When/Then
@@ -193,7 +194,7 @@ public class TradeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.tradeId", is(1001)));
 
-        verify(tradeService).saveTrade(any(Trade.class), any(TradeDTO.class));
+        verify(tradeService).amendTrade(eq(tradeId), any(TradeDTO.class)); // verify amendTrade rather that saveTrade
     }
 
     @Test
@@ -220,7 +221,7 @@ public class TradeControllerTest {
         // When/Then
         mockMvc.perform(delete("/api/trades/1001")
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk()); // Changed from isNoContent()
 
         verify(tradeService).deleteTrade(1001L);
     }
