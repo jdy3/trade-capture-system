@@ -1,6 +1,7 @@
 package com.technicalchallenge.repository;
 
 import com.technicalchallenge.model.Trade;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,4 +27,12 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
 
     @Query("SELECT t FROM Trade t WHERE t.tradeId = :tradeId AND t.active = true ORDER BY t.version DESC")
     Optional<Trade> findLatestActiveVersionByTradeId(@Param("tradeId") Long tradeId);
+
+    // ENHANCEMENT-1 METHODS
+    // find by date ranges
+    List<Trade> findByCounterpartyName(String counterpartyName);
+    List<Trade> findByBookName(String bookName);
+    List<Trade> findByTraderLogin(String loginId);
+    List<Trade> findByStatus(String tradeStatus);
+    List<Trade> findbyTradeDateBetween(LocalDate fromDate, LocalDate toDate);
 }
