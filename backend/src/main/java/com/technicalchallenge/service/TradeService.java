@@ -64,6 +64,31 @@ public class TradeService {
         return tradeRepository.findAll();
     }
 
+    public List<Trade> getTradesByCounterparty(String counterpartyName) {
+        logger.info("Retrieving trades by counterparty: {}", counterpartyName);
+        return tradeRepository.findByCounterpartyName(counterpartyName);
+    }
+
+    public List<Trade> getTradesByBookName(String bookName) {
+        logger.info("Retrieving trades by book: {}", bookName);
+        return tradeRepository.findByBookName(bookName);
+    }
+
+    public List<Trade> getTradesByTrader(String loginId) {
+        logger.info("Retrieving tades by loginId: {}", loginId);
+        return tradeRepository.findByTrader(loginId);
+    }
+
+    public List<Trade> getTradesByStatus(String tradeStatus) {
+        logger.info("Retrieving trades by status: {}", tradeStatus);
+        return tradeRepository.findByStatus(tradeStatus);
+    }
+
+    public List<Trade> getTradesByDateBetween(LocalDate fromDate, LocalDate toDate) {
+        logger.info("Retrieving trades by date range: {}", fromDate, toDate);
+        return tradeRepository.findbyTradeDateBetween(fromDate, toDate);
+    }
+
     public Optional<Trade> getTradeById(Long tradeId) {
         logger.debug("Retrieving trade by id: {}", tradeId);
         return tradeRepository.findByTradeIdAndActiveTrue(tradeId);

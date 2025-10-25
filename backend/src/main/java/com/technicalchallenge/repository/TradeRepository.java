@@ -28,11 +28,10 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
     @Query("SELECT t FROM Trade t WHERE t.tradeId = :tradeId AND t.active = true ORDER BY t.version DESC")
     Optional<Trade> findLatestActiveVersionByTradeId(@Param("tradeId") Long tradeId);
 
-    // ENHANCEMENT-1 METHODS
-    // find by date ranges
+    //ENHANCEMENT-1 METHODS
     List<Trade> findByCounterpartyName(String counterpartyName);
     List<Trade> findByBookName(String bookName);
-    List<Trade> findByTraderLogin(String loginId);
+    List<Trade> findByTrader(String loginId);
     List<Trade> findByStatus(String tradeStatus);
     List<Trade> findbyTradeDateBetween(LocalDate fromDate, LocalDate toDate);
 }
