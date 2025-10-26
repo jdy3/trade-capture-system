@@ -65,9 +65,9 @@ public class TradeService {
     }
 
     // ENHANCEMENT-1 SERVICE METHODS
-    public List<Trade> searchTradesByCounterpartyName(String counterpartyName) {
-        logger.debug("Retrieving trades by counterparty: {}", counterpartyName);
-        return tradeRepository.findByCounterpartyName(counterpartyName);
+    public List<Trade> searchTradesByCounterpartyName(String name) {
+        logger.debug("Retrieving trades by counterparty: {}", name);
+        return tradeRepository.findByCounterpartyName(name);
     }
 
     public List<Trade> searchTradesByBookName(String bookName) {
@@ -77,12 +77,12 @@ public class TradeService {
 
     public List<Trade> searchTradesByTraderLoginId(String loginId) {
         logger.debug("Retrieving tades by loginId: {}", loginId);
-        return tradeRepository.findByTraderLoginId(loginId);
+        return tradeRepository.findByTraderUserLoginId(loginId);
     }
 
     public List<Trade> searchTradesByStatus(String tradeStatus) {
         logger.debug("Retrieving trades by status: {}", tradeStatus);
-        return tradeRepository.findByStatus(tradeStatus);
+        return tradeRepository.findByTradeStatus(tradeStatus);
     }
 
     public List<Trade> searchTradesByDateBetween(LocalDate tradeDateFrom, LocalDate tradeDateTo) {

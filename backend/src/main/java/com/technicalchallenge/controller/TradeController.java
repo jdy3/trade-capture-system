@@ -55,7 +55,7 @@ public class TradeController {
     }
 
     // ENHANCEMENT-1 CONTROLLER METHODS
-    @GetMapping("/search/counterparty/{counterpartyName}")
+    @GetMapping("/search/counterparty/{name}")
     @Operation(summary = "Searches trades by counterparty",
                description = "Retrieves trades by counterparty")
     @ApiResponses(value = {
@@ -67,9 +67,9 @@ public class TradeController {
     })
     public List<TradeDTO> searchTradesByCounterpartyName(
             @Parameter(description = "Trade counterparty", required = true)
-            @PathVariable(name = "counterpartyName") String counterpartyName) {
-        logger.debug("Fetching trades by counterparty: {}", counterpartyName);
-        return tradeService.searchTradesByCounterpartyName(counterpartyName).stream()
+            @PathVariable(name = "name") String name) {
+        logger.debug("Fetching trades by counterparty: {}", name);
+        return tradeService.searchTradesByCounterpartyName(name).stream()
                 .map(tradeMapper::toDto)
                 .toList();
     }
