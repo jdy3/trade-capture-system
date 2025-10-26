@@ -64,29 +64,30 @@ public class TradeService {
         return tradeRepository.findAll();
     }
 
-    public List<Trade> getTradesByCounterparty(String counterpartyName) {
-        logger.info("Retrieving trades by counterparty: {}", counterpartyName);
+    // ENHANCEMENT-1 SERVICE METHODS
+    public List<Trade> searchTradesByCounterpartyName(String counterpartyName) {
+        logger.debug("Retrieving trades by counterparty: {}", counterpartyName);
         return tradeRepository.findByCounterpartyName(counterpartyName);
     }
 
-    public List<Trade> getTradesByBookName(String bookName) {
-        logger.info("Retrieving trades by book: {}", bookName);
+    public List<Trade> searchTradesByBookName(String bookName) {
+        logger.debug("Retrieving trades by book: {}", bookName);
         return tradeRepository.findByBookName(bookName);
     }
 
-    public List<Trade> getTradesByTrader(String loginId) {
-        logger.info("Retrieving tades by loginId: {}", loginId);
-        return tradeRepository.findByTrader(loginId);
+    public List<Trade> searchTradesByTraderLoginId(String loginId) {
+        logger.debug("Retrieving tades by loginId: {}", loginId);
+        return tradeRepository.findByTraderLoginId(loginId);
     }
 
-    public List<Trade> getTradesByStatus(String tradeStatus) {
-        logger.info("Retrieving trades by status: {}", tradeStatus);
+    public List<Trade> searchTradesByStatus(String tradeStatus) {
+        logger.debug("Retrieving trades by status: {}", tradeStatus);
         return tradeRepository.findByStatus(tradeStatus);
     }
 
-    public List<Trade> getTradesByDateBetween(LocalDate fromDate, LocalDate toDate) {
-        logger.info("Retrieving trades by date range: {}", fromDate, toDate);
-        return tradeRepository.findbyTradeDateBetween(fromDate, toDate);
+    public List<Trade> searchTradesByDateBetween(LocalDate tradeDateFrom, LocalDate tradeDateTo) {
+        logger.debug("Retrieving trades by date range: {} to {}", tradeDateFrom, tradeDateTo);
+        return tradeRepository.findByTradeDateBetween(tradeDateFrom, tradeDateTo);
     }
 
     public Optional<Trade> getTradeById(Long tradeId) {

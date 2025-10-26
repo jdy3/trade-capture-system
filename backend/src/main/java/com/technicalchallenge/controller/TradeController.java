@@ -19,6 +19,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
+
+import java.time.LocalDate;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -48,6 +50,104 @@ public class TradeController {
     public List<TradeDTO> getAllTrades() {
         logger.info("Fetching all trades");
         return tradeService.getAllTrades().stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    // ENHANCEMENT-1 CONTROLLER METHODS
+    @GetMapping("/search/counterparty/{counterpartyName}")
+    @Operation(summary = "Searches trades by counterparty",
+               description = "Retrieves trades by counterparty")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid counterparty format")
+    })
+    public List<TradeDTO> searchTradesByCounterpartyName(
+            @Parameter(description = "Trade counterparty", required = true)
+            @PathVariable(name = "counterpartyName") String counterpartyName) {
+        logger.debug("Fetching trades by counterparty: {}", counterpartyName);
+        return tradeService.searchTradesByCounterpartyName(counterpartyName).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/search/book/{bookName}")
+    @Operation(summary = "Search trades by book",
+               description = "Retrieves trades by book")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid book format")
+    })
+    public List<TradeDTO> searchTradesByBookName(
+            @Parameter(description = "Trade book", required = true)
+            @PathVariable(name = "bookName") String bookName) {
+        logger.debug("Fetching trades by bookName: {}", bookName);
+        return tradeService.searchTradesByBookName(bookName).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/search/trader/{loginId}")
+    @Operation(summary = "Search trades by trader",
+               description = "Retrieves trades by trader")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid trader format")
+    })
+    public List<TradeDTO> searchTradesByTraderLoginId(
+            @Parameter(description = "Trader login ID", required = true)
+            @PathVariable(name = "loginId") String loginId) {
+        logger.debug("Fetching trades by traderLoginId: {}", loginId);
+        return tradeService.searchTradesByTraderLoginId(loginId).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/search/status/{tradeStatus}")
+    @Operation(summary = "Search trades by status",
+               description = "Retrieves trades by status")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid status format")
+    })
+    public List<TradeDTO> searchTradesByStatus(
+            @Parameter(description = "Trade status", required = true)
+            @PathVariable(name = "tradeStatus") String tradeStatus) {
+        logger.debug("Fetching trades by tradeStatus: {}", tradeStatus);
+        return tradeService.searchTradesByStatus(tradeStatus).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/search/trade-date-between/{tradeDateFrom}/{tradeDateTo}")
+    @Operation(summary = "Search trades by trade date between",
+               description = "Retrieves trades by trade date between")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid trade date between format")
+    })
+    public List<TradeDTO> searchTradesByDateBetween(
+            @Parameter(description = "Trade date from (yyyy-MM-dd)", required = true)
+            @PathVariable(name = "tradeDateFrom") LocalDate tradeDateFrom,
+            @Parameter(description = "Trade date to (yyyy-MM-dd)", required = true)
+            @PathVariable(name = "tradeDateTo") LocalDate tradeDateTo) {
+        logger.debug("Fetching trades by trade date between: {} and {}", tradeDateFrom, tradeDateTo);
+        return tradeService.searchTradesByDateBetween(tradeDateFrom, tradeDateTo).stream()
                 .map(tradeMapper::toDto)
                 .toList();
     }

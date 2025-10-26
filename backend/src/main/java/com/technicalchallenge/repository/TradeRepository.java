@@ -31,7 +31,7 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
     //ENHANCEMENT-1 METHODS
     List<Trade> findByCounterpartyName(String counterpartyName);
     List<Trade> findByBookName(String bookName);
-    List<Trade> findByTrader(String loginId);
+    List<Trade> findByTraderLoginId(String loginId);
     List<Trade> findByStatus(String tradeStatus);
-    List<Trade> findbyTradeDateBetween(LocalDate fromDate, LocalDate toDate);
+    List<Trade> findByTradeDateBetween(LocalDate fromDate, LocalDate toDate);
 }
