@@ -5,6 +5,10 @@ import com.technicalchallenge.mapper.TradeMapper;
 import com.technicalchallenge.model.Trade;
 import com.technicalchallenge.service.TradeService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -152,6 +156,49 @@ public class TradeController {
                 .toList();
     }
 
+    // ENHANCEMENT-1: PAGINATED FILTERING METHODS 
+    @GetMapping("/filter")
+    @Operation(summary = "Get all trades by page",
+              description = "Retrieves trades with pagination.")
+     @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved all trades by page",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+     })
+     public ResponseEntity<Page<TradeDTO>> getAllTrades(
+        @Parameter(description = "Page number (zero-based)", example = "0")
+        @RequestParam(defaultValue = "0") int page,
+        @Parameter(description = "Page size", example = "10")
+        @RequestParam(defaultValue = "10") int size) {
+        logger.debug("Retrieving all trades - page: {}, size: {}", page, size);
+        Page<Trade> trades = tradeService.getAllTrades(page, size);
+        return ResponseEntity.ok(trades.map(tradeMapper::toDto));
+     }
+             
+    @GetMapping("/filter/search")
+    @Operation(summary = "Get trades filtered by multi-criteria search parameters, by page",
+              description = "Retrieves trades filtered by multi-criteria search parameters, by page. Supports pagination with 'page', 'size', and 'sort' query parameters.")
+     @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved filtered trades by page",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+     })
+     public ResponseEntity<Page<TradeDTO>> filterTrades(
+        @RequestParam(required = false) String counterpartyName, 
+        @RequestParam(required = false) String bookName, 
+        @RequestParam(required = false) String loginId, 
+        @RequestParam(required = false) String tradeStatus, 
+        @RequestParam(required = false) LocalDate tradeDateFrom,
+        @RequestParam(required = false) LocalDate tradeDateTo,
+        @Parameter(hidden = true)
+        Pageable pageable) {
+        logger.debug("Retrieving filtered trades by page");
+        Page<Trade> trades = tradeService.filterTrades(counterpartyName, bookName, loginId, tradeStatus, tradeDateFrom, tradeDateTo, pageable);
+        return ResponseEntity.ok(trades.map(tradeMapper::toDto));
+     }
+    
     @GetMapping("/{id}")
     @Operation(summary = "Get trade by ID",
                description = "Retrieves a specific trade by its unique identifier")

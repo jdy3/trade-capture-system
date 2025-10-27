@@ -128,6 +128,9 @@ public class TradeService {
         else if (tradeDateTo != null) {
             spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("tradeDate"), tradeDateTo));
         }
+        if (pageable.getSort().isUnsorted()) {
+        pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("tradeDate").descending());
+        }
 
         logger.debug("Filtering trades with criteria - counterparty: {}, book: {}, trader: {}, status: {}, tradeDateFrom: {}, tradeDateTo: {}", counterpartyName, bookName, loginId, tradeStatus, tradeDateFrom, tradeDateTo);
         return tradeRepository.findAll(spec, pageable);    
