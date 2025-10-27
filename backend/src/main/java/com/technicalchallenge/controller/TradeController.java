@@ -54,7 +54,7 @@ public class TradeController {
                 .toList();
     }
 
-    // ENHANCEMENT-1 CONTROLLER METHODS
+   //ENHANCEMENT-1: MULTI-CRITERIA SEARCH METHODS
     @GetMapping("/search/counterparty/{name}")
     @Operation(summary = "Searches trades by counterparty",
                description = "Retrieves trades by counterparty")
