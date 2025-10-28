@@ -1,5 +1,7 @@
 package com.technicalchallenge.service;
 
+import io.github.perplexhub.rsql.RSQLJPASupport;
+
 import com.technicalchallenge.dto.TradeDTO;
 import com.technicalchallenge.dto.TradeLegDTO;
 import com.technicalchallenge.model.*;
@@ -9,10 +11,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-//import org.modelmapper.internal.bytebuddy.asm.Advice.OffsetMapping.Sort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-//import org.springdoc.core.converters.models.Pageable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -135,6 +135,13 @@ public class TradeService {
         logger.debug("Filtering trades with criteria - counterparty: {}, book: {}, trader: {}, status: {}, tradeDateFrom: {}, tradeDateTo: {}", counterpartyName, bookName, loginId, tradeStatus, tradeDateFrom, tradeDateTo);
         return tradeRepository.findAll(spec, pageable);    
     }
+
+     // ENHANCEMENT-1: RSQL QUERY METHOD
+     public Page<Trade> searchByRsql(String query, int page, int size, String sortParam) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("tradeDate").descending());
+        Specification<Trade> spec = RSQLJPASupport.toSpecification(query);
+        return tradeRepository.findAll(spec, pageable);
+     } 
 
     public Optional<Trade> getTradeById(Long tradeId) {
         logger.debug("Retrieving trade by id: {}", tradeId);
