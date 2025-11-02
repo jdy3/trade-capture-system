@@ -30,15 +30,15 @@ public interface TradeRepository extends JpaRepository<Trade, Long>, JpaSpecific
     Optional<Trade> findLatestActiveVersionByTradeId(@Param("tradeId") Long tradeId);
 
     //ENHANCEMENT-1: MULTI-CRITERIA SEARCH METHODS
-    List<Trade> findByCounterpartyNameIgnoreCase(String name); 
+    List<Trade> findByCounterparty_Name(String name); 
 
-    List<Trade> findByTraderUserLoginIdIgnoreCase(String loginId);
+    List<Trade> findByTraderUser_LoginId(String loginId);
 
     List<Trade> findByTradeDateBetween(LocalDate fromDate, LocalDate toDate);
 
     @Query("SELECT t FROM Trade t WHERE t.book.bookName = :bookName")
-    List<Trade> findByBookNameIgnoreCase(@Param("bookName") String bookName);
+    List<Trade> findByBookName(@Param("bookName") String bookName);
 
     @Query("SELECT t FROM Trade t WHERE t.tradeStatus.tradeStatus = :tradeStatus")
-    List<Trade> findByTradeStatusIgnoreCase(@Param("tradeStatus") String tradeStatus);
+    List<Trade> findByTradeStatus(@Param("tradeStatus") String tradeStatus);
 }

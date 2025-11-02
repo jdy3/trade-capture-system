@@ -9,6 +9,21 @@ enhancement(trade): Enhancement 1 - Multi-criteria search
 
 enhancement(trade): Enhancement 1 - Paginated filtering
 
+enhancement(trade): Enhancement 1 - RSQL query support
+
+- Added RSQL parsing support and JPA Specification integration via external library.
+
+- Introduced RsqlAliasConfig to rewrite user-friendly query aliases into entity field paths (case-insensitive on alias keys).
+
+- Updated GlobalExceptionHandler to provide clearer responses for RSQL syntax and unknown-field errors.
+
+- Full case-insensitive value matching is not natively supported by the RSQL library.
+Implementing a universal lower-case comparison visitor would require custom parsing logic.
+Recommendation: use a case-insensitive DB collation or enforce canonical casing on input values for consistent behavior.
+
+
+
+
 
 
 

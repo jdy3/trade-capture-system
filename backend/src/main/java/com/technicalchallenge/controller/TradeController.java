@@ -170,7 +170,7 @@ public class TradeController {
         @Parameter(description = "Page number (zero-based)", example = "0")
         @RequestParam(defaultValue = "0") int page,
         @Parameter(description = "Page size", example = "10")
-        @RequestParam(defaultValue = "10") int size) {
+        @RequestParam(defaultValue = "20") int size) {
         logger.debug("Retrieving all trades - page: {}, size: {}", page, size);
         Page<Trade> trades = tradeService.getAllTrades(page, size);
         return ResponseEntity.ok(trades.map(tradeMapper::toDto));
@@ -198,6 +198,26 @@ public class TradeController {
         Page<Trade> trades = tradeService.filterTrades(counterpartyName, bookName, loginId, tradeStatus, tradeDateFrom, tradeDateTo, pageable);
         return ResponseEntity.ok(trades.map(tradeMapper::toDto));
      }
+
+     // ENHANCEMENT-1: RSQL QUERY METHOD
+     @GetMapping("/rsql")
+     @Operation(summary = "Search trades using RSQL queries",
+                description = "Supports advanced dynamic queries using RSQL syntax")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved trades by RSQL syntax, by page",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid RSQL syntax")
+     })
+     public ResponseEntity<Page<TradeDTO>> searchByRsql(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "tradeDate,desc") String sort) {
+        logger.debug("RSQL query recieved: {}", query);
+        Page<Trade> trades = tradeService.searchByRsql(query, page, size, sort);
+        return ResponseEntity.ok(trades.map(tradeMapper::toDto));
+    }
     
     @GetMapping("/{id}")
     @Operation(summary = "Get trade by ID",
