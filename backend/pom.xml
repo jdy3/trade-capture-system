@@ -55,11 +55,11 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- RSQL for dynamic queries -->
+        <!-- Enables RSQL query parsing and conversion to JPA Specifications -->
         <dependency>
-            <groupId>cz.jirutka.rsql</groupId>
-            <artifactId>rsql-parser</artifactId>
-            <version>2.1.0</version>
+            <groupId>io.github.perplexhub</groupId>
+            <artifactId>rsql-jpa-spring-boot-starter</artifactId>
+            <version>6.0.33</version>
         </dependency>
 
         <!-- ModelMapper for DTO/entity mapping -->

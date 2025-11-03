@@ -5,6 +5,10 @@ import com.technicalchallenge.mapper.TradeMapper;
 import com.technicalchallenge.model.Trade;
 import com.technicalchallenge.service.TradeService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -19,6 +23,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
+
+import java.time.LocalDate;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -52,6 +58,167 @@ public class TradeController {
                 .toList();
     }
 
+   //ENHANCEMENT-1: MULTI-CRITERIA SEARCH METHODS
+    @GetMapping("/search/counterparty/{name}")
+    @Operation(summary = "Searches trades by counterparty",
+               description = "Retrieves trades by counterparty")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid counterparty format")
+    })
+    public List<TradeDTO> searchTradesByCounterpartyName(
+            @Parameter(description = "Trade counterparty", required = true)
+            @PathVariable(name = "name") String name) {
+        logger.debug("Fetching trades by counterparty: {}", name);
+        return tradeService.searchTradesByCounterpartyName(name).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/search/book/{bookName}")
+    @Operation(summary = "Search trades by book",
+               description = "Retrieves trades by book")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid book format")
+    })
+    public List<TradeDTO> searchTradesByBookName(
+            @Parameter(description = "Trade book", required = true)
+            @PathVariable(name = "bookName") String bookName) {
+        logger.debug("Fetching trades by bookName: {}", bookName);
+        return tradeService.searchTradesByBookName(bookName).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/search/trader/{loginId}")
+    @Operation(summary = "Search trades by trader",
+               description = "Retrieves trades by trader")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid trader format")
+    })
+    public List<TradeDTO> searchTradesByTraderLoginId(
+            @Parameter(description = "Trader login ID", required = true)
+            @PathVariable(name = "loginId") String loginId) {
+        logger.debug("Fetching trades by traderLoginId: {}", loginId);
+        return tradeService.searchTradesByTraderLoginId(loginId).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/search/status/{tradeStatus}")
+    @Operation(summary = "Search trades by status",
+               description = "Retrieves trades by status")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid status format")
+    })
+    public List<TradeDTO> searchTradesByStatus(
+            @Parameter(description = "Trade status", required = true)
+            @PathVariable(name = "tradeStatus") String tradeStatus) {
+        logger.debug("Fetching trades by tradeStatus: {}", tradeStatus);
+        return tradeService.searchTradesByStatus(tradeStatus).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    @GetMapping("/search/trade-date-between/{tradeDateFrom}/{tradeDateTo}")
+    @Operation(summary = "Search trades by trade date between",
+               description = "Retrieves trades by trade date between")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Trades found and returned successfully",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "404", description = "Trades not found"),
+        @ApiResponse(responseCode = "400", description = "Invalid trade date between format")
+    })
+    public List<TradeDTO> searchTradesByDateBetween(
+            @Parameter(description = "Trade date from (yyyy-MM-dd)", required = true)
+            @PathVariable(name = "tradeDateFrom") LocalDate tradeDateFrom,
+            @Parameter(description = "Trade date to (yyyy-MM-dd)", required = true)
+            @PathVariable(name = "tradeDateTo") LocalDate tradeDateTo) {
+        logger.debug("Fetching trades by trade date between: {} and {}", tradeDateFrom, tradeDateTo);
+        return tradeService.searchTradesByDateBetween(tradeDateFrom, tradeDateTo).stream()
+                .map(tradeMapper::toDto)
+                .toList();
+    }
+
+    // ENHANCEMENT-1: PAGINATED FILTERING METHODS 
+    @GetMapping("/filter")
+    @Operation(summary = "Get all trades by page",
+              description = "Retrieves trades with pagination.")
+     @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved all trades by page",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+     })
+     public ResponseEntity<Page<TradeDTO>> getAllTrades(
+        @Parameter(description = "Page number (zero-based)", example = "0")
+        @RequestParam(defaultValue = "0") int page,
+        @Parameter(description = "Page size", example = "10")
+        @RequestParam(defaultValue = "20") int size) {
+        logger.debug("Retrieving all trades - page: {}, size: {}", page, size);
+        Page<Trade> trades = tradeService.getAllTrades(page, size);
+        return ResponseEntity.ok(trades.map(tradeMapper::toDto));
+     }
+             
+    @GetMapping("/filter/search")
+    @Operation(summary = "Get trades filtered by multi-criteria search parameters, by page",
+              description = "Retrieves trades filtered by multi-criteria search parameters, by page. Supports pagination with 'page', 'size', and 'sort' query parameters.")
+     @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved filtered trades by page",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "500", description = "Internal server error")
+     })
+     public ResponseEntity<Page<TradeDTO>> filterTrades(
+        @RequestParam(required = false) String counterpartyName, 
+        @RequestParam(required = false) String bookName, 
+        @RequestParam(required = false) String loginId, 
+        @RequestParam(required = false) String tradeStatus, 
+        @RequestParam(required = false) LocalDate tradeDateFrom,
+        @RequestParam(required = false) LocalDate tradeDateTo,
+        @Parameter(hidden = true)
+        Pageable pageable) {
+        logger.debug("Retrieving filtered trades by page");
+        Page<Trade> trades = tradeService.filterTrades(counterpartyName, bookName, loginId, tradeStatus, tradeDateFrom, tradeDateTo, pageable);
+        return ResponseEntity.ok(trades.map(tradeMapper::toDto));
+     }
+
+     // ENHANCEMENT-1: RSQL QUERY METHOD
+     @GetMapping("/rsql")
+     @Operation(summary = "Search trades using RSQL queries",
+                description = "Supports advanced dynamic queries using RSQL syntax")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Successfully retrieved trades by RSQL syntax, by page",
+                    content = @Content(mediaType = "application/json",
+                                     schema = @Schema(implementation = TradeDTO.class))),
+        @ApiResponse(responseCode = "400", description = "Invalid RSQL syntax")
+     })
+     public ResponseEntity<Page<TradeDTO>> searchByRsql(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "tradeDate,desc") String sort) {
+        logger.debug("RSQL query recieved: {}", query);
+        Page<Trade> trades = tradeService.searchByRsql(query, page, size, sort);
+        return ResponseEntity.ok(trades.map(tradeMapper::toDto));
+    }
+    
     @GetMapping("/{id}")
     @Operation(summary = "Get trade by ID",
                description = "Retrieves a specific trade by its unique identifier")

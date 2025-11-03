@@ -1,14 +1,22 @@
 package com.technicalchallenge.service;
 
+import io.github.perplexhub.rsql.RSQLJPASupport;
+
+import com.technicalchallenge.config.RsqlAliasConfig;
 import com.technicalchallenge.dto.TradeDTO;
 import com.technicalchallenge.dto.TradeLegDTO;
 import com.technicalchallenge.model.*;
 import com.technicalchallenge.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -63,6 +71,97 @@ public class TradeService {
         logger.info("Retrieving all trades");
         return tradeRepository.findAll();
     }
+
+    //ENHANCEMENT-1: MULTI-CRITERIA SEARCH METHODS
+    public List<Trade> searchTradesByCounterpartyName(String name) {
+        logger.debug("Retrieving trades by counterparty: {}", name);
+        return tradeRepository.findByCounterparty_Name(name);
+    }
+
+    public List<Trade> searchTradesByBookName(String bookName) {
+        logger.debug("Retrieving trades by book: {}", bookName);
+        return tradeRepository.findByBookName(bookName);
+    }
+
+    public List<Trade> searchTradesByTraderLoginId(String loginId) {
+        logger.debug("Retrieving trades by loginId: {}", loginId);
+        return tradeRepository.findByTraderUser_LoginId(loginId);
+    }
+
+    public List<Trade> searchTradesByStatus(String tradeStatus) {
+        logger.debug("Retrieving trades by status: {}", tradeStatus);
+        return tradeRepository.findByTradeStatus(tradeStatus);
+    }
+
+    public List<Trade> searchTradesByDateBetween(LocalDate tradeDateFrom, LocalDate tradeDateTo) {
+        logger.debug("Retrieving trades by date range: {} to {}", tradeDateFrom, tradeDateTo);
+        return tradeRepository.findByTradeDateBetween(tradeDateFrom, tradeDateTo);
+    }
+
+    // ENHANCEMENT-1: PAGINATED FILTERING METHODS 
+    public Page<Trade> getAllTrades(int page, int size) {
+        logger.debug("Retrieving all trades - page: {}, size: {}", page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("tradeDate").descending());
+        return tradeRepository.findAll(pageable);
+    }
+
+    public Page<Trade> filterTrades(String counterpartyName, String bookName, String loginId, String tradeStatus, LocalDate tradeDateFrom, LocalDate tradeDateTo, Pageable pageable) {
+        Specification<Trade> spec = Specification.where(null);
+
+        if (counterpartyName != null && !counterpartyName.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("counterparty").get("name")), counterpartyName.toLowerCase()));
+        }
+        if (bookName != null && !bookName.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("book").get("bookName")), bookName.toLowerCase()));
+        }
+        if (loginId != null && !loginId.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("traderUser").get("loginId")), loginId.toLowerCase()));
+        }
+        if (tradeStatus != null && !tradeStatus.trim().isEmpty()) {
+            spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("tradeStatus").get("tradeStatus")), tradeStatus.toLowerCase()));
+        }
+        if (tradeDateFrom != null && tradeDateTo != null) {
+            spec = spec.and((root, query, cb) -> cb.between(root.get("tradeDate"), tradeDateFrom, tradeDateTo));
+        }
+        else if (tradeDateFrom != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("tradeDate"), tradeDateFrom));
+        }
+        else if (tradeDateTo != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("tradeDate"), tradeDateTo));
+        }
+        if (pageable.getSort().isUnsorted()) {
+        pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("tradeDate").descending());
+        }
+
+        logger.debug("Filtering trades with criteria - counterparty: {}, book: {}, trader: {}, status: {}, tradeDateFrom: {}, tradeDateTo: {}", counterpartyName, bookName, loginId, tradeStatus, tradeDateFrom, tradeDateTo);
+        return tradeRepository.findAll(spec, pageable);    
+    }
+
+     // ENHANCEMENT-1: RSQL QUERY METHOD
+     public Page<Trade> searchByRsql(String query, int page, int size, String sortParam) {
+        String rewritten = RsqlAliasConfig.applyAliases(query);
+        logger.debug("RSQL original: {}", query);
+        logger.debug("RSQL rewritten: {}", rewritten);
+
+        String[] sortParts = sortParam.split(",");
+        String sortField = sortParts[0];
+        Sort.Direction direction = (sortParts.length > 1 && sortParts[1].equalsIgnoreCase("asc")) ? Sort.Direction.ASC : Sort.Direction.DESC;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortField));
+
+        Specification<Trade> spec;
+
+        try{
+            spec = RSQLJPASupport.toSpecification(rewritten);      
+        } catch (Exception ex) {
+            logger.error("RSQL parse error for '{}': {}", query, ex.getMessage());
+            throw new IllegalArgumentException("Invalid RSQL:" + query, ex);
+        }
+        if (spec == null) {
+            throw new IllegalArgumentException("Invalid RSQL" + query);
+            }
+        return tradeRepository.findAll(spec, pageable);
+     } 
 
     public Optional<Trade> getTradeById(Long tradeId) {
         logger.debug("Retrieving trade by id: {}", tradeId);
