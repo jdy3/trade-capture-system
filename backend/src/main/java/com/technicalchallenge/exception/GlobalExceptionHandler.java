@@ -36,7 +36,10 @@ public class GlobalExceptionHandler {
         " — check field names");
     }
 
-
+    @ExceptionHandler(TradeAuthorizationException.class)
+        public ResponseEntity<String> handleTradeAuthorizationException(TradeAuthorizationException ex) {
+            return ResponseEntity.status(403).body(ex.getMessage());
+        }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
