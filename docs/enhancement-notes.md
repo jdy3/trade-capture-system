@@ -23,21 +23,17 @@ Recommendation: use a case-insensitive DB collation or enforce canonical casing 
 
 Enhancement(trade): Enhancement 2 - Comprehensive Trade Validation Engine
 
-Date Validation Rules:
-public ValidationResult validateTradeBusinessRules(TradeDTO tradeDTO)
-
-Maturity date cannot be before start date or trade date
-Start date cannot be before trade date
-Trade date cannot be more than 30 days in the past
-
 User Privilege Enforcement:
 public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO) -> public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO)
 
-- Removed the userId parameter from validateUserPrivileges to reduce parameter clutter and avoid accidental mismatches. The inputterUserName (the name of the person logged in) is now accessed directly from the tradeDTO parameter.
+- Removed the userId parameter from validateUserPrivileges to avoid redundant input and prevent mismatches. The identity of the logged-in user (inputterUserName) is derived internally. Security recommendation: The authenticated user should be resolved from the security context (e.g., loginId → inputterUserName), not selected by the client UI. This prevents users from spoofing identities by choosing another username from a dropdown.
 
 - TRADER_SALES is a single user type in the database, but business rules require distinct privileges for TRADER and SALES. For security, I have not implemented SALES-specific logic and restrict traders from seeing other traders' trades. Recommendation: make TRADER and SALES distinct user types in the database to allow fine-grained privilege enforcement.
 
-- validateUserPrivileges is seperate method, called at the top of createTrade(). This approach is modular, clear and reusable. The method can also be called at the top of other relevant service methods, such as amendTrade etc. 
+- validateUserPrivileges is seperate method, called at the top of createTrade(). This approach is modular, clear and reusable. The method can also be called at the top of other relevant service methods, such as amendTrade etc.
+
+Date Validation Rules:
+public ValidationResult validateTradeBusinessRules(TradeDTO tradeDTO)
 
 Cross-Leg Business Rules:
 public ValidationResult validateTradeLegConsistency(List<TradeLegDTO> legs)
@@ -48,9 +44,9 @@ Floating legs must have an index specified
 Fixed legs must have a valid rate
 
 Entity Status Validation:
-
 User, book, and counterparty must be active in the system
 All reference data must exist and be valid
+
 
 
 

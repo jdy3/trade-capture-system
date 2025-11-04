@@ -485,23 +485,31 @@ public class TradeService {
     }
 
     private void validateTradeCreation(TradeDTO tradeDTO) {
-        // Validate dates - Fixed to use consistent field names
 
-    //     ValidationResult businessResult = validateTradeBusinessRules(tradeDTO);
-    // if (!businessResult.isValid()) {
-    //     throw new RuntimeException("Business rule validation failed: " + businessResult.getMessage());
-    // }
+        if (tradeDTO.getTradeDate() != null) {
+            if (tradeDTO.getTradeDate().isBefore(LocalDate.now().minusDays(30))) {
+                throw new RuntimeException("Trade date cannot be more than 30 days in the past");
+            }
+        }
 
         if (tradeDTO.getTradeStartDate() != null && tradeDTO.getTradeDate() != null) {
             if (tradeDTO.getTradeStartDate().isBefore(tradeDTO.getTradeDate())) {
                 throw new RuntimeException("Start date cannot be before trade date");
             }
         }
+
+        if (tradeDTO.getTradeMaturityDate() != null && tradeDTO.getTradeDate() != null) {
+            if (tradeDTO.getTradeMaturityDate().isBefore(tradeDTO.getTradeDate())) {
+                throw new RuntimeException("Maturity date cannot be before trade date");
+            }
+        }
+
         if (tradeDTO.getTradeMaturityDate() != null && tradeDTO.getTradeStartDate() != null) {
             if (tradeDTO.getTradeMaturityDate().isBefore(tradeDTO.getTradeStartDate())) {
                 throw new RuntimeException("Maturity date cannot be before start date");
             }
         }
+
 
     //     ValidationResult legResult = validateTradeLegConsistency(tradeDTO.getTradeLegs());
     // if (!legResult.isValid()) {
@@ -512,6 +520,20 @@ public class TradeService {
             throw new RuntimeException("Trade must have exactly 2 legs");
         }
     }
+
+    // ENHANCEMENT-2: DATE VALIDATION RULES METHOD:
+
+    public ValidationResult validateTradeBusinessRules(TradeDTO tradeDTO) {
+        
+    }
+
+
+        ValidationResult businessResult = validateTradeBusinessRules(tradeDTO);
+    if (!businessResult.isValid()) {
+        throw new RuntimeException("Business rule validation failed: " + businessResult.getMessage());
+    }
+
+
 
     private Trade mapDTOToEntity(TradeDTO dto) {
         Trade trade = new Trade();
