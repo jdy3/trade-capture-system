@@ -31,12 +31,13 @@ Start date cannot be before trade date
 Trade date cannot be more than 30 days in the past
 
 User Privilege Enforcement:
-public boolean validateUserPrivileges(String userId, String operation, TradeDTO tradeDTO)
+public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO) -> public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO)
 
-TRADER: Can create, amend, terminate, cancel trades
-SALES: Can create and amend trades only (no terminate/cancel)
-MIDDLE_OFFICE: Can amend and view trades only
-SUPPORT: Can view trades only
+- Removed the userId parameter from validateUserPrivileges to reduce parameter clutter and avoid accidental mismatches. The inputterUserName (the name of the person logged in) is now accessed directly from the tradeDTO parameter.
+
+- TRADER_SALES is a single user type in the database, but business rules require distinct privileges for TRADER and SALES. For security, I have not implemented SALES-specific logic and restrict traders from seeing other traders' trades. Recommendation: make TRADER and SALES distinct user types in the database to allow fine-grained privilege enforcement.
+
+- validateUserPrivileges is seperate method, called at the top of createTrade(). This approach is modular, clear and reusable. The method can also be called at the top of other relevant service methods, such as amendTrade etc. 
 
 Cross-Leg Business Rules:
 public ValidationResult validateTradeLegConsistency(List<TradeLegDTO> legs)

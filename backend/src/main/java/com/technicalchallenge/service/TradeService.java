@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
@@ -170,6 +171,11 @@ public class TradeService {
 
     @Transactional
     public Trade createTrade(TradeDTO tradeDTO) {
+
+         if (!validateUserPrivileges("create", tradeDTO)) {
+        throw new RuntimeException("User does not have privileges for this operation.");
+        }
+
         logger.info("Creating new trade with ID: {}", tradeDTO.getTradeId());
 
         // Generate trade ID if not provided
@@ -208,6 +214,47 @@ public class TradeService {
 
         logger.info("Successfully created trade with ID: {}", savedTrade.getTradeId());
         return savedTrade;
+    }
+
+    // ENHANCEMENT-2: USER PRIVILEGE ENFORCEMENT METHOD
+    public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO) {
+        logger.info("InputterUserName: {}", tradeDTO.getInputterUserName());
+        logger.info("Operation: {}", operation);
+        logger.info("TraderUserName: {}", tradeDTO.getTraderUserName());
+
+        String inputterUserName = tradeDTO.getInputterUserName();
+        if (inputterUserName == null || inputterUserName.trim().isEmpty()) return false;
+
+        String[] names = inputterUserName.trim().split("\\s+", 2);
+        String firstName = names[0];
+        String lastName = names.length > 1 ? names[1] : "";
+
+        Optional<ApplicationUser> optUser = applicationUserRepository.findByFirstNameAndLastName(firstName, lastName);
+
+        if (optUser.isEmpty()) return false;
+        
+        ApplicationUser user = optUser.get();
+        UserProfile userProfile = user.getUserProfile();
+        String userType = userProfile.getUserType();
+
+        String op = operation.trim().toLowerCase();
+
+        // TRADERS: Can create, amend, terminate, cancel and view their own trades
+        if (userType.equalsIgnoreCase("TRADER_SALES") && inputterUserName.equalsIgnoreCase(tradeDTO.getTraderUserName())) {
+            return op.equals("create") || op.equals("amend") || op.equals("terminate") || op.equals("cancel") || op.equals("view");
+        }
+
+        // MIDDLE_OFFICE: can amend and view only
+        if (userType.equalsIgnoreCase("MO") || userType.equalsIgnoreCase("MIDDLE_OFFICE")) {
+            return op.equals("amend") || op.equals("view");
+        }
+
+        // SUPPORT: Can view only
+        if (userType.equalsIgnoreCase("SUPPORT")) {
+            return op.equals("view");
+        }
+        
+        return false;
     }
 
     // NEW METHOD: For controller compatibility
@@ -439,6 +486,12 @@ public class TradeService {
 
     private void validateTradeCreation(TradeDTO tradeDTO) {
         // Validate dates - Fixed to use consistent field names
+
+    //     ValidationResult businessResult = validateTradeBusinessRules(tradeDTO);
+    // if (!businessResult.isValid()) {
+    //     throw new RuntimeException("Business rule validation failed: " + businessResult.getMessage());
+    // }
+
         if (tradeDTO.getTradeStartDate() != null && tradeDTO.getTradeDate() != null) {
             if (tradeDTO.getTradeStartDate().isBefore(tradeDTO.getTradeDate())) {
                 throw new RuntimeException("Start date cannot be before trade date");
@@ -450,6 +503,10 @@ public class TradeService {
             }
         }
 
+    //     ValidationResult legResult = validateTradeLegConsistency(tradeDTO.getTradeLegs());
+    // if (!legResult.isValid()) {
+    //     throw new RuntimeException("Trade leg consistency validation failed: " + legResult.getMessage());
+    // }
         // Validate trade has exactly 2 legs
         if (tradeDTO.getTradeLegs() == null || tradeDTO.getTradeLegs().size() != 2) {
             throw new RuntimeException("Trade must have exactly 2 legs");
