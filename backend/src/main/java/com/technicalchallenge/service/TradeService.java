@@ -7,6 +7,9 @@ import com.technicalchallenge.dto.TradeDTO;
 import com.technicalchallenge.dto.TradeLegDTO;
 import com.technicalchallenge.model.*;
 import com.technicalchallenge.repository.*;
+import com.technicalchallenge.validation.TradeValidator;
+import com.technicalchallenge.validation.ValidationResult;
+import com.technicalchallenge.exception.TradeValidationException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -65,6 +68,8 @@ public class TradeService {
     private BusinessDayConventionRepository businessDayConventionRepository;
     @Autowired
     private PayRecRepository payRecRepository;
+    @Autowired
+    private TradeValidator tradeValidator;
     @Autowired
     private AdditionalInfoService additionalInfoService;
 
@@ -486,54 +491,24 @@ public class TradeService {
 
     private void validateTradeCreation(TradeDTO tradeDTO) {
 
-        if (tradeDTO.getTradeDate() != null) {
-            if (tradeDTO.getTradeDate().isBefore(LocalDate.now().minusDays(30))) {
-                throw new RuntimeException("Trade date cannot be more than 30 days in the past");
-            }
+        // ENHANCEMENT-2: COMPREHENSIVE DATE VALIDATION:
+        ValidationResult tradeBusinessRulesResult = tradeValidator.validateTradeBusinessRules(tradeDTO);
+        if (!tradeBusinessRulesResult.isValid()) {
+        throw new TradeValidationException(tradeBusinessRulesResult.getMessage());
         }
 
-        if (tradeDTO.getTradeStartDate() != null && tradeDTO.getTradeDate() != null) {
-            if (tradeDTO.getTradeStartDate().isBefore(tradeDTO.getTradeDate())) {
-                throw new RuntimeException("Start date cannot be before trade date");
-            }
-        }
-
-        if (tradeDTO.getTradeMaturityDate() != null && tradeDTO.getTradeDate() != null) {
-            if (tradeDTO.getTradeMaturityDate().isBefore(tradeDTO.getTradeDate())) {
-                throw new RuntimeException("Maturity date cannot be before trade date");
-            }
-        }
-
-        if (tradeDTO.getTradeMaturityDate() != null && tradeDTO.getTradeStartDate() != null) {
-            if (tradeDTO.getTradeMaturityDate().isBefore(tradeDTO.getTradeStartDate())) {
-                throw new RuntimeException("Maturity date cannot be before start date");
-            }
-        }
+        
 
 
-    //     ValidationResult legResult = validateTradeLegConsistency(tradeDTO.getTradeLegs());
+    //    ValidationResult legResult = validateTradeLegConsistency(tradeDTO.getTradeLegs());
     // if (!legResult.isValid()) {
     //     throw new RuntimeException("Trade leg consistency validation failed: " + legResult.getMessage());
     // }
-        // Validate trade has exactly 2 legs
-        if (tradeDTO.getTradeLegs() == null || tradeDTO.getTradeLegs().size() != 2) {
-            throw new RuntimeException("Trade must have exactly 2 legs");
-        }
-    }
-
-    // ENHANCEMENT-2: DATE VALIDATION RULES METHOD:
-
-    public ValidationResult validateTradeBusinessRules(TradeDTO tradeDTO) {
-        
-    }
-
-
-        ValidationResult businessResult = validateTradeBusinessRules(tradeDTO);
-    if (!businessResult.isValid()) {
-        throw new RuntimeException("Business rule validation failed: " + businessResult.getMessage());
-    }
-
-
+    //     Validate trade has exactly 2 legs
+    //     if (tradeDTO.getTradeLegs() == null || tradeDTO.getTradeLegs().size() != 2) {
+    //         throw new RuntimeException("Trade must have exactly 2 legs");
+    //     }
+    }    
 
     private Trade mapDTOToEntity(TradeDTO dto) {
         Trade trade = new Trade();
