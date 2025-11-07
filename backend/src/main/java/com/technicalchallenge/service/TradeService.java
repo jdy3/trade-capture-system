@@ -5,15 +5,19 @@ import io.github.perplexhub.rsql.RSQLJPASupport;
 import com.technicalchallenge.config.RsqlAliasConfig;
 import com.technicalchallenge.dto.TradeDTO;
 import com.technicalchallenge.dto.TradeLegDTO;
+import com.technicalchallenge.dto.CashflowDTO;
 import com.technicalchallenge.model.*;
 import com.technicalchallenge.repository.*;
 import com.technicalchallenge.validation.TradeValidator;
 import com.technicalchallenge.validation.ValidationResult;
 import com.technicalchallenge.exception.TradeValidationException;
+import com.technicalchallenge.mapper.CashflowMapper;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.apache.catalina.User;
 import org.slf4j.Logger;
@@ -28,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.management.RuntimeErrorException;
 
@@ -496,18 +501,17 @@ public class TradeService {
         if (!tradeBusinessRulesResult.isValid()) {
         throw new TradeValidationException(tradeBusinessRulesResult.getMessage());
         }
-
         
+        // ENHANCEMENT-2: COMPREHENSIVE CROSS-LEG BUSINESS RULES VALIDATION:
+        ValidationResult tradeLegConsistencyResult = tradeValidator.validateTradeLegConsistency(tradeDTO);
+        if (!tradeLegConsistencyResult.isValid()) {
+            throw new TradeValidationException(tradeLegConsistencyResult.getMessage());
+        }
 
+        // Entity Status Validation:
+        // User, book, and counterparty must be active in the system
+        // All reference data must exist and be valid
 
-    //    ValidationResult legResult = validateTradeLegConsistency(tradeDTO.getTradeLegs());
-    // if (!legResult.isValid()) {
-    //     throw new RuntimeException("Trade leg consistency validation failed: " + legResult.getMessage());
-    // }
-    //     Validate trade has exactly 2 legs
-    //     if (tradeDTO.getTradeLegs() == null || tradeDTO.getTradeLegs().size() != 2) {
-    //         throw new RuntimeException("Trade must have exactly 2 legs");
-    //     }
     }    
 
     private Trade mapDTOToEntity(TradeDTO dto) {

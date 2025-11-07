@@ -33,20 +33,16 @@ public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO) -> pu
 - validateUserPrivileges is seperate method, called at the top of createTrade(). This approach is modular, clear and reusable. The method can also be called at the top of other relevant service methods, such as amendTrade etc.
 
 Date Validation Rules:
-public ValidationResult validateTradeBusinessRules(TradeDTO tradeDTO)
 
 Cross-Leg Business Rules:
-public ValidationResult validateTradeLegConsistency(List<TradeLegDTO> legs)
+public ValidationResult validateTradeLegConsistency(List<TradeLegDTO> legs) -> public ValidationResult validateTradeLegConsistency(TradeDTO tradeDTO)
 
-Both legs must have identical maturity dates
-Legs must have opposite pay/receive flags
-Floating legs must have an index specified
-Fixed legs must have a valid rate
+- Changed method parameter from List<TradeLegDTO> -> TradeDTO. Both validateTradeCreation() and createTrade(), from which validateTradeLegConsistency will be called, already use TradeDTO as their parameter. All trade leg and cashflow data needed for consistency checks are accessible via tradeDTO.
+This ensures the method signatures are consistent and reduces the need to extract legs separately before validation.
 
 Entity Status Validation:
 User, book, and counterparty must be active in the system
 All reference data must exist and be valid
-
 
 
 
