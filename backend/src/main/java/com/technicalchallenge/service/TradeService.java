@@ -5,14 +5,12 @@ import io.github.perplexhub.rsql.RSQLJPASupport;
 import com.technicalchallenge.config.RsqlAliasConfig;
 import com.technicalchallenge.dto.TradeDTO;
 import com.technicalchallenge.dto.TradeLegDTO;
-import com.technicalchallenge.dto.CashflowDTO;
 import com.technicalchallenge.model.*;
 import com.technicalchallenge.repository.*;
 import com.technicalchallenge.validation.TradeValidator;
 import com.technicalchallenge.validation.ValidationResult;
 import com.technicalchallenge.exception.TradeAuthorizationException;
 import com.technicalchallenge.exception.TradeValidationException;
-import com.technicalchallenge.mapper.CashflowMapper;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -33,9 +31,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
-import javax.management.RuntimeErrorException;
 
 @Service
 @Transactional
@@ -120,16 +115,16 @@ public class TradeService {
     public Page<Trade> filterTrades(String counterpartyName, String bookName, String loginId, String tradeStatus, LocalDate tradeDateFrom, LocalDate tradeDateTo, Pageable pageable) {
         Specification<Trade> spec = Specification.where(null);
 
-        if (counterpartyName != null && !counterpartyName.trim().isEmpty()) {
+        if (counterpartyName != null) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("counterparty").get("name")), counterpartyName.toLowerCase()));
         }
-        if (bookName != null && !bookName.trim().isEmpty()) {
+        if (bookName != null) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("book").get("bookName")), bookName.toLowerCase()));
         }
-        if (loginId != null && !loginId.trim().isEmpty()) {
+        if (loginId != null) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("traderUser").get("loginId")), loginId.toLowerCase()));
         }
-        if (tradeStatus != null && !tradeStatus.trim().isEmpty()) {
+        if (tradeStatus != null) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("tradeStatus").get("tradeStatus")), tradeStatus.toLowerCase()));
         }
         if (tradeDateFrom != null && tradeDateTo != null) {
@@ -231,7 +226,7 @@ public class TradeService {
         logger.info("TraderUserName: {}", tradeDTO.getTraderUserName());
 
         String inputterUserName = tradeDTO.getInputterUserName();
-        if (inputterUserName == null || inputterUserName.trim().isEmpty()) return false;
+        if (inputterUserName == null) return false;
 
         String[] names = inputterUserName.trim().split("\\s+", 2);
         String firstName = names[0];
@@ -513,7 +508,7 @@ public class TradeService {
         }
 
         // ENHANCEMENT-2: COMPREHENSIVE REFERENCE DATA VALIDATION:
-        ValidationResult referenceDataValidityResult = tradeValidator.validateReferenceData(tradeDTO);
+        ValidationResult referenceDataValidityResult = tradeValidator.validateTradeDTOReferenceData(tradeDTO);
         if (!referenceDataValidityResult.isValid()) {
             throw new TradeValidationException(referenceDataValidityResult.getMessage());
         }
