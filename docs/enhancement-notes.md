@@ -44,6 +44,13 @@ Entity Status Validation:
 User, book, and counterparty must be active in the system
 All reference data must exist and be valid
 
+- Reference data validation in validateReferenceData(trade) has been moved into validateTradeCreation(tradeDTO). Early validation of reference data using the DTO allows errors to be caught before any entities are created or persisted. This avoids any partially created entities if validation fails and provides better feedback to the user before any database changes.
+
+- Checks to ensure that the user, book, and counterparty are active in the system are now handled within validateTradeCreation(). However, I recommend that the UI restrict the dropdown list to display only active entities. This prevents users from selecting invalid options, reduces validation failures server-side, and avoids unnecessary processing overhead.
+
+- Active-status checks are performed only for the trader (the economic owner of the trade), not for the inputter or logged-in user. This aligns with the prior design note. Only active application users should be allowed to authenticate in the UI. Therefore, additional active-status checks for the inputter or logged-in user at trade-creation time are not required, since inactive users would already be prevented from accessing the system.
+
+
 
 
 

@@ -10,6 +10,7 @@ import com.technicalchallenge.model.*;
 import com.technicalchallenge.repository.*;
 import com.technicalchallenge.validation.TradeValidator;
 import com.technicalchallenge.validation.ValidationResult;
+import com.technicalchallenge.exception.TradeAuthorizationException;
 import com.technicalchallenge.exception.TradeValidationException;
 import com.technicalchallenge.mapper.CashflowMapper;
 
@@ -183,7 +184,7 @@ public class TradeService {
     public Trade createTrade(TradeDTO tradeDTO) {
 
          if (!validateUserPrivileges("create", tradeDTO)) {
-        throw new RuntimeException("User does not have privileges for this operation.");
+        throw new TradeAuthorizationException("User does not have privileges for this operation.");
         }
 
         logger.info("Creating new trade with ID: {}", tradeDTO.getTradeId());
@@ -196,7 +197,7 @@ public class TradeService {
             logger.info("Generated trade ID: {}", generatedTradeId);
         }
 
-        // Validate business rules
+        // Validate business rules AND Ensure reference data exists and is valid
         validateTradeCreation(tradeDTO);
 
         // Create trade entity
@@ -213,9 +214,6 @@ public class TradeService {
 
         // Populate reference data
         populateReferenceDataByName(trade, tradeDTO);
-
-        // Ensure we have essential reference data
-        validateReferenceData(trade);
 
         Trade savedTrade = tradeRepository.save(trade);
 
@@ -496,7 +494,7 @@ public class TradeService {
 
     private void validateTradeCreation(TradeDTO tradeDTO) {
 
-        // ENHANCEMENT-2: COMPREHENSIVE DATE VALIDATION:
+        // ENHANCEMENT-2: COMPREHENSIVE DATE BUSINESS RULES VALIDATION:
         ValidationResult tradeBusinessRulesResult = tradeValidator.validateTradeBusinessRules(tradeDTO);
         if (!tradeBusinessRulesResult.isValid()) {
         throw new TradeValidationException(tradeBusinessRulesResult.getMessage());
@@ -508,11 +506,18 @@ public class TradeService {
             throw new TradeValidationException(tradeLegConsistencyResult.getMessage());
         }
 
-        // Entity Status Validation:
-        // User, book, and counterparty must be active in the system
-        // All reference data must exist and be valid
+        // ENHANCEMENT-2: ENSURE USER, BOOK, AND COUNTERPARTY ARE ACTIVE IN THE SYSTEM
+        ValidationResult referenceDataIsActiveResult = tradeValidator.confirmReferenceDataIsActive(tradeDTO);
+        if (!referenceDataIsActiveResult.isValid()) {
+            throw new TradeValidationException(referenceDataIsActiveResult.getMessage());
+        }
 
-    }    
+        // ENHANCEMENT-2: COMPREHENSIVE REFERENCE DATA VALIDATION:
+        ValidationResult referenceDataValidityResult = tradeValidator.validateReferenceData(tradeDTO);
+        if (!referenceDataValidityResult.isValid()) {
+            throw new TradeValidationException(referenceDataValidityResult.getMessage());
+        }
+    }  
 
     private Trade mapDTOToEntity(TradeDTO dto) {
         Trade trade = new Trade();
@@ -725,21 +730,6 @@ public class TradeService {
         }
 
         return BigDecimal.ZERO;
-    }
-
-    private void validateReferenceData(Trade trade) {
-        // Validate essential reference data is populated
-        if (trade.getBook() == null) {
-            throw new RuntimeException("Book not found or not set");
-        }
-        if (trade.getCounterparty() == null) {
-            throw new RuntimeException("Counterparty not found or not set");
-        }
-        if (trade.getTradeStatus() == null) {
-            throw new RuntimeException("Trade status not found or not set");
-        }
-
-        logger.debug("Reference data validation passed for trade");
     }
 
     // NEW METHOD: Generate the next trade ID (sequential)

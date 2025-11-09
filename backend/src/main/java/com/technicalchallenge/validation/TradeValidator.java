@@ -4,10 +4,17 @@ import com.technicalchallenge.dto.CashflowDTO;
 import com.technicalchallenge.dto.TradeDTO;
 import com.technicalchallenge.dto.TradeLegDTO;
 import com.technicalchallenge.mapper.CashflowMapper;
+import com.technicalchallenge.model.ApplicationUser;
+import com.technicalchallenge.model.Book;
 import com.technicalchallenge.model.Cashflow;
+import com.technicalchallenge.model.Counterparty;
+import com.technicalchallenge.repository.ApplicationUserRepository;
+import com.technicalchallenge.repository.BookRepository;
+import com.technicalchallenge.repository.CounterpartyRepository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +25,12 @@ public class TradeValidator {
 
     @Autowired
     private CashflowMapper cashflowMapper;
+    @Autowired
+    private ApplicationUserRepository applicationUserRepository;
+    @Autowired
+    private BookRepository bookRepository;
+    @Autowired
+    private CounterpartyRepository counterpartyRepository;
 
     public ValidationResult validateTradeBusinessRules(TradeDTO tradeDTO) {
         ValidationResult result = ValidationResult.success();
@@ -94,7 +107,7 @@ public class TradeValidator {
         }
 
         // Legs must have opposite pay/receive flags
-       if (!leg1PayReceiveFlag.isEmpty() && !leg2PayReceiveFlag.isEmpty()) {
+        if (!leg1PayReceiveFlag.isEmpty() && !leg2PayReceiveFlag.isEmpty()) {
 
         boolean isOpposite = (leg1PayReceiveFlag.equals("PAY") && leg2PayReceiveFlag.equals("RECEIVE")) || 
                              (leg1PayReceiveFlag.equals("RECEIVE") && leg2PayReceiveFlag.equals("PAY"));
@@ -119,7 +132,93 @@ public class TradeValidator {
         }        
        }
        
-       return result;
+            return result;
+        }
+
+    public ValidationResult confirmReferenceDataIsActive(TradeDTO tradeDTO) {
+        ValidationResult result = ValidationResult.success();
+
+        // Trader user must be active in the system
+        String traderName = tradeDTO.getTraderUserName();
+        if (traderName == null || traderName.trim().isEmpty()) {
+            result.addError("Trader must be set");
+            return result;
+        }
+
+        String[] traderNames = traderName.trim().split("\\s+", 2);
+        String firstName = traderNames[0];
+        String lastName = traderNames.length > 1 ? traderNames[1] : "";      
+        
+        Optional<ApplicationUser> optTrader = applicationUserRepository.findByFirstNameAndLastName(firstName, lastName);
+        if (optTrader.isEmpty()) {
+            result.addError("Trader must exist in the system");
+            return result;
+        }
+        if (!optTrader.get().isActive()) {
+            result.addError("Trader must be active in the system");
+        }
+
+        // Book must be active in the system
+        String bookName = tradeDTO.getBookName();
+        if (bookName == null || bookName.trim().isEmpty()) {
+            result.addError("Book must be set");
+            return result;
+        }
+
+        Optional<Book> optBook = bookRepository.findByBookName(bookName);
+        if (optBook.isEmpty()) {
+            result.addError("Book must exist in the system");
+            return result;
+        }
+        if (!optBook.get().isActive()) {
+            result.addError("Book must be active in the system");
+        }
+
+        // Counterparty must be active in the system
+        String counterpartyName = tradeDTO.getCounterpartyName();
+        if (counterpartyName == null || counterpartyName.trim().isEmpty()) {
+            result.addError("Counterparty must be set");
+            return result;
+        }
+
+        Optional<Counterparty> optCounterparty = counterpartyRepository.findByName(counterpartyName);
+        if (optCounterparty.isEmpty()) {
+            result.addError("Counterparty must exist in the system");
+            return result;
+        }
+        if (!optCounterparty.get().isActive()) {
+            result.addError("Counterparty must be active in the system");
+        }
+         return result;
     }
 
+    public ValidationResult validateReferenceData(TradeDTO tradeDTO) {
+        ValidationResult result = ValidationResult.success();
+
+
+        return result;
+    }
 }
+
+
+//  private void validateReferenceData(Trade trade) {
+        
+//         All reference data must exist and be valid
+
+//         Check populateReferenceDataByName() -includes populateUserReferences() + populateTradeTypeReference()
+
+//         Check populateLegReferenceData()
+
+//         Validate essential reference data is populated
+//         if (trade.getBook() == null) {
+//             throw new RuntimeException("Book not found or not set");
+//         }
+//         if (trade.getCounterparty() == null) {
+//             throw new RuntimeException("Counterparty not found or not set");
+//         }
+//         if (trade.getTradeStatus() == null) {
+//             throw new RuntimeException("Trade status not found or not set");
+//         }
+
+//         logger.debug("Reference data validation passed for trade");
+//     }
