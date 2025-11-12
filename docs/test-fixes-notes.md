@@ -1,3 +1,5 @@
+# Step 2: Fix Failing Test Cases (REQUIRED)
+
 ### fix(test): TradeControllerTest - Fixed testCreateTrade HTTP semantics
 
 - Problem: testCreateTrade() was failing with 201 expecting 200
