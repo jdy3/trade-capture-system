@@ -36,10 +36,18 @@ public class GlobalExceptionHandler {
         " — check field names");
     }
 
+    @ExceptionHandler(TradeAuthorizationException.class)
+        public ResponseEntity<String> handleTradeAuthorizationException(TradeAuthorizationException ex) {
+            return ResponseEntity.status(403).body(ex.getMessage());
+        }
 
+    @ExceptionHandler(TradeValidationException.class)
+    public ResponseEntity<String> handleTradeValidationException(TradeValidationException ex) {
+        return ResponseEntity.status(422).body(ex.getMessage());
+    }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
-        return ResponseEntity.badRequest().body("Error creating trade: " + ex.getMessage());
+        return ResponseEntity.status(500).body("Unexpected error: " + ex.getMessage());
     }
 }

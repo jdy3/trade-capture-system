@@ -7,11 +7,18 @@ import com.technicalchallenge.dto.TradeDTO;
 import com.technicalchallenge.dto.TradeLegDTO;
 import com.technicalchallenge.model.*;
 import com.technicalchallenge.repository.*;
+import com.technicalchallenge.validation.TradeValidator;
+import com.technicalchallenge.validation.ValidationResult;
+import com.technicalchallenge.exception.TradeAuthorizationException;
+import com.technicalchallenge.exception.TradeValidationException;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
@@ -24,8 +31,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import javax.management.RuntimeErrorException;
 
 @Service
 @Transactional
@@ -64,6 +69,8 @@ public class TradeService {
     private BusinessDayConventionRepository businessDayConventionRepository;
     @Autowired
     private PayRecRepository payRecRepository;
+    @Autowired
+    private TradeValidator tradeValidator;
     @Autowired
     private AdditionalInfoService additionalInfoService;
 
@@ -108,16 +115,16 @@ public class TradeService {
     public Page<Trade> filterTrades(String counterpartyName, String bookName, String loginId, String tradeStatus, LocalDate tradeDateFrom, LocalDate tradeDateTo, Pageable pageable) {
         Specification<Trade> spec = Specification.where(null);
 
-        if (counterpartyName != null && !counterpartyName.trim().isEmpty()) {
+        if (counterpartyName != null) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("counterparty").get("name")), counterpartyName.toLowerCase()));
         }
-        if (bookName != null && !bookName.trim().isEmpty()) {
+        if (bookName != null) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("book").get("bookName")), bookName.toLowerCase()));
         }
-        if (loginId != null && !loginId.trim().isEmpty()) {
+        if (loginId != null) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("traderUser").get("loginId")), loginId.toLowerCase()));
         }
-        if (tradeStatus != null && !tradeStatus.trim().isEmpty()) {
+        if (tradeStatus != null) {
             spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("tradeStatus").get("tradeStatus")), tradeStatus.toLowerCase()));
         }
         if (tradeDateFrom != null && tradeDateTo != null) {
@@ -170,6 +177,11 @@ public class TradeService {
 
     @Transactional
     public Trade createTrade(TradeDTO tradeDTO) {
+
+        if (!validateUserPrivileges("create", tradeDTO)) {
+        throw new TradeAuthorizationException("User does not have privileges for this operation.");
+        }
+
         logger.info("Creating new trade with ID: {}", tradeDTO.getTradeId());
 
         // Generate trade ID if not provided
@@ -180,7 +192,7 @@ public class TradeService {
             logger.info("Generated trade ID: {}", generatedTradeId);
         }
 
-        // Validate business rules
+        // Validate business rules AND Ensure reference data exists and is valid
         validateTradeCreation(tradeDTO);
 
         // Create trade entity
@@ -198,9 +210,6 @@ public class TradeService {
         // Populate reference data
         populateReferenceDataByName(trade, tradeDTO);
 
-        // Ensure we have essential reference data
-        validateReferenceData(trade);
-
         Trade savedTrade = tradeRepository.save(trade);
 
         // Create trade legs and cashflows
@@ -208,6 +217,43 @@ public class TradeService {
 
         logger.info("Successfully created trade with ID: {}", savedTrade.getTradeId());
         return savedTrade;
+    }
+
+    // ENHANCEMENT-2: USER PRIVILEGE ENFORCEMENT METHOD
+    public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO) {
+        logger.info("InputterUserName: {}", tradeDTO.getInputterUserName());
+        logger.info("Operation: {}", operation);
+        logger.info("TraderUserName: {}", tradeDTO.getTraderUserName());
+
+        String inputterUserName = tradeDTO.getInputterUserName();
+        if (inputterUserName == null) return false;
+
+        Optional<ApplicationUser> optUser = applicationUserRepository.findByFirstNameIgnoreCase(inputterUserName);
+
+        if (optUser.isEmpty()) return false;
+        
+        ApplicationUser user = optUser.get();
+        UserProfile userProfile = user.getUserProfile();
+        String userType = userProfile.getUserType();
+
+        String op = operation.trim().toLowerCase();
+
+        // TRADERS: Can create, amend, terminate, cancel and view their own trades
+        if (userType.equalsIgnoreCase("TRADER_SALES") && inputterUserName.equalsIgnoreCase(tradeDTO.getTraderUserName())) {
+            return op.equals("create") || op.equals("amend") || op.equals("terminate") || op.equals("cancel") || op.equals("view");
+        }
+
+        // MIDDLE_OFFICE: can amend and view only
+        if (userType.equalsIgnoreCase("MO") || userType.equalsIgnoreCase("MIDDLE_OFFICE")) {
+            return op.equals("amend") || op.equals("view");
+        }
+
+        // SUPPORT: Can view only
+        if (userType.equalsIgnoreCase("SUPPORT")) {
+            return op.equals("view");
+        }
+        
+        return false;
     }
 
     // NEW METHOD: For controller compatibility
@@ -438,23 +484,31 @@ public class TradeService {
     }
 
     private void validateTradeCreation(TradeDTO tradeDTO) {
-        // Validate dates - Fixed to use consistent field names
-        if (tradeDTO.getTradeStartDate() != null && tradeDTO.getTradeDate() != null) {
-            if (tradeDTO.getTradeStartDate().isBefore(tradeDTO.getTradeDate())) {
-                throw new RuntimeException("Start date cannot be before trade date");
-            }
+
+        // ENHANCEMENT-2: COMPREHENSIVE DATE BUSINESS RULES VALIDATION:
+        ValidationResult tradeBusinessRulesResult = tradeValidator.validateTradeBusinessRules(tradeDTO);
+        if (!tradeBusinessRulesResult.isValid()) {
+        throw new TradeValidationException(tradeBusinessRulesResult.getMessage());
         }
-        if (tradeDTO.getTradeMaturityDate() != null && tradeDTO.getTradeStartDate() != null) {
-            if (tradeDTO.getTradeMaturityDate().isBefore(tradeDTO.getTradeStartDate())) {
-                throw new RuntimeException("Maturity date cannot be before start date");
-            }
+        
+        // ENHANCEMENT-2: COMPREHENSIVE CROSS-LEG BUSINESS RULES VALIDATION:
+        ValidationResult tradeLegConsistencyResult = tradeValidator.validateTradeLegConsistency(tradeDTO);
+        if (!tradeLegConsistencyResult.isValid()) {
+            throw new TradeValidationException(tradeLegConsistencyResult.getMessage());
         }
 
-        // Validate trade has exactly 2 legs
-        if (tradeDTO.getTradeLegs() == null || tradeDTO.getTradeLegs().size() != 2) {
-            throw new RuntimeException("Trade must have exactly 2 legs");
+        // ENHANCEMENT-2: ENSURE USER, BOOK, AND COUNTERPARTY ARE ACTIVE IN THE SYSTEM
+        ValidationResult referenceDataIsActiveResult = tradeValidator.confirmReferenceDataIsActive(tradeDTO);
+        if (!referenceDataIsActiveResult.isValid()) {
+            throw new TradeValidationException(referenceDataIsActiveResult.getMessage());
         }
-    }
+
+        // ENHANCEMENT-2: COMPREHENSIVE REFERENCE DATA VALIDATION:
+        ValidationResult referenceDataValidityResult = tradeValidator.validateTradeDTOReferenceData(tradeDTO);
+        if (!referenceDataValidityResult.isValid()) {
+            throw new TradeValidationException(referenceDataValidityResult.getMessage());
+        }
+    }  
 
     private Trade mapDTOToEntity(TradeDTO dto) {
         Trade trade = new Trade();
@@ -667,21 +721,6 @@ public class TradeService {
         }
 
         return BigDecimal.ZERO;
-    }
-
-    private void validateReferenceData(Trade trade) {
-        // Validate essential reference data is populated
-        if (trade.getBook() == null) {
-            throw new RuntimeException("Book not found or not set");
-        }
-        if (trade.getCounterparty() == null) {
-            throw new RuntimeException("Counterparty not found or not set");
-        }
-        if (trade.getTradeStatus() == null) {
-            throw new RuntimeException("Trade status not found or not set");
-        }
-
-        logger.debug("Reference data validation passed for trade");
     }
 
     // NEW METHOD: Generate the next trade ID (sequential)
