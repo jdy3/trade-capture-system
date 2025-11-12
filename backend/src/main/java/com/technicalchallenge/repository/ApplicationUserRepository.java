@@ -13,5 +13,5 @@ public interface ApplicationUserRepository extends JpaRepository<ApplicationUser
     Optional<ApplicationUser> findByFirstName(String firstName);
 
     // ENHANCEMENT-2: USER PRIVILEGE ENFORCEMENT METHOD
-    Optional<ApplicationUser> findByFirstNameAndLastName(String firstName, String lastName);
+    Optional<ApplicationUser> findByFirstNameIgnoreCase(String firstName);
 }

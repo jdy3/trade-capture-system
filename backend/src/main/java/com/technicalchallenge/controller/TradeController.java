@@ -253,16 +253,10 @@ public class TradeController {
             @Parameter(description = "Trade details for creation", required = true)
             @Valid @RequestBody TradeDTO tradeDTO) {
         logger.info("Creating new trade: {}", tradeDTO);
-        try {
-            Trade trade = tradeMapper.toEntity(tradeDTO);
-            tradeService.populateReferenceDataByName(trade, tradeDTO);
-            Trade savedTrade = tradeService.saveTrade(trade, tradeDTO);
+        
+            Trade savedTrade = tradeService.createTrade(tradeDTO);
             TradeDTO responseDTO = tradeMapper.toDto(savedTrade);
-            return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
-        } catch (Exception e) {
-            logger.error("Error creating trade: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error creating trade: " + e.getMessage());
-        }
+            return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);        
     }
 
     @PutMapping("/{id}")

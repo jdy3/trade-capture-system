@@ -178,7 +178,7 @@ public class TradeService {
     @Transactional
     public Trade createTrade(TradeDTO tradeDTO) {
 
-         if (!validateUserPrivileges("create", tradeDTO)) {
+        if (!validateUserPrivileges("create", tradeDTO)) {
         throw new TradeAuthorizationException("User does not have privileges for this operation.");
         }
 
@@ -228,11 +228,7 @@ public class TradeService {
         String inputterUserName = tradeDTO.getInputterUserName();
         if (inputterUserName == null) return false;
 
-        String[] names = inputterUserName.trim().split("\\s+", 2);
-        String firstName = names[0];
-        String lastName = names.length > 1 ? names[1] : "";
-
-        Optional<ApplicationUser> optUser = applicationUserRepository.findByFirstNameAndLastName(firstName, lastName);
+        Optional<ApplicationUser> optUser = applicationUserRepository.findByFirstNameIgnoreCase(inputterUserName);
 
         if (optUser.isEmpty()) return false;
         

@@ -48,6 +48,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
-        return ResponseEntity.badRequest().body("Error creating trade: " + ex.getMessage());
+        return ResponseEntity.status(500).body("Unexpected error: " + ex.getMessage());
     }
 }

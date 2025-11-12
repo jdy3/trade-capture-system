@@ -2,7 +2,6 @@ package com.technicalchallenge.validation;
 
 import com.technicalchallenge.dto.TradeDTO;
 import com.technicalchallenge.dto.TradeLegDTO;
-import com.technicalchallenge.mapper.CashflowMapper;
 import com.technicalchallenge.model.ApplicationUser;
 import com.technicalchallenge.model.Book;
 import com.technicalchallenge.model.Counterparty;
@@ -30,9 +29,8 @@ public class TradeValidator {
     public ValidationResult validateTradeBusinessRules(TradeDTO tradeDTO) {
         ValidationResult result = ValidationResult.success();
 
-
-    if (tradeDTO.getTradeDate() != null) {
-        // Validate Trade date is no more than 30 days in the past
+        if (tradeDTO.getTradeDate() != null) {
+            // Validate Trade date is no more than 30 days in the past
             if (tradeDTO.getTradeDate().isBefore(LocalDate.now().minusDays(30))) {
                 result.addError("Trade date cannot be more than 30 days in the past");
             }
@@ -67,7 +65,7 @@ public class TradeValidator {
 
         List<TradeLegDTO> tradeLegs = tradeDTO.getTradeLegs();
 
-        //Validate trade has exactly 2 legs
+        // Validate trade has exactly 2 legs
         if (tradeLegs.size() != 2) {
             result.addError("Trade must have exactly 2 legs");
             return result;
@@ -103,13 +101,13 @@ public class TradeValidator {
             leg1PayReceiveFlag = leg1PayReceiveFlag.trim().toUpperCase();
             leg2PayReceiveFlag = leg2PayReceiveFlag.trim().toUpperCase();
 
-        boolean isOpposite = (leg1PayReceiveFlag.equals("PAY") && leg2PayReceiveFlag.equals("RECEIVE")) || 
-                             (leg1PayReceiveFlag.equals("RECEIVE") && leg2PayReceiveFlag.equals("PAY"));
+            boolean isOpposite = (leg1PayReceiveFlag.equals("PAY") && leg2PayReceiveFlag.equals("RECEIVE")) ||
+                    (leg1PayReceiveFlag.equals("RECEIVE") && leg2PayReceiveFlag.equals("PAY"));
 
             if (!isOpposite) {
                 result.addError("Legs must have opposite pay/receive flags");
             }
-       }
+        }
 
         String leg1Type = leg1.getLegType();
         String leg2Type = leg2.getLegType();
@@ -117,7 +115,7 @@ public class TradeValidator {
         boolean leg1TypeMissing = (leg1Type == null);
         boolean leg2TypeMissing = (leg2Type == null);
 
-        //Validate leg type is populated
+        // Validate leg type is populated
         if (leg1TypeMissing) {
             result.addError("Leg 1 type must be set");
         }
@@ -125,25 +123,25 @@ public class TradeValidator {
             result.addError("Leg 2 type must be set");
         }
 
-       // Validate floating leg index is populated AND Fixed legs have a valid rate
-       if (!leg1TypeMissing && !leg2TypeMissing) {
+        // Validate floating leg index is populated AND Fixed legs have a valid rate
+        if (!leg1TypeMissing && !leg2TypeMissing) {
 
-        for (TradeLegDTO leg : tradeLegs) {
-        String legType = leg.getLegType().trim().toUpperCase();
+            for (TradeLegDTO leg : tradeLegs) {
+                String legType = leg.getLegType().trim().toUpperCase();
 
-        if (legType.equals("FLOATING")) {
-            if (leg.getIndexName() == null) {
-                result.addError("Floating legs must have an index specified");
+                if (legType.equals("FLOATING")) {
+                    if (leg.getIndexName() == null) {
+                        result.addError("Floating legs must have an index specified");
+                    }
+                } else if (legType.equals("FIXED")) {
+                    if (leg.getRate() == null || leg.getRate() < 0) {
+                        result.addError("Fixed legs must have a valid rate (>= 0)");
+                    }
+                }
             }
-        } else if (legType.equals("FIXED")) {
-            if (leg.getRate() == null || leg.getRate() < 0) {
-                result.addError("Fixed legs must have a valid rate (>= 0)");
-            }
-        }        
-       }
-       }
-        return result;
         }
+        return result;
+    }
 
     public ValidationResult confirmReferenceDataIsActive(TradeDTO tradeDTO) {
         ValidationResult result = ValidationResult.success();
@@ -152,54 +150,42 @@ public class TradeValidator {
         String traderName = tradeDTO.getTraderUserName();
         if (traderName == null) {
             result.addError("Trader must be set");
-            return result;
-        }
-
-        String[] traderNames = traderName.trim().split("\\s+", 2);
-        String firstName = traderNames[0];
-        String lastName = traderNames.length > 1 ? traderNames[1] : "";      
-        
-        Optional<ApplicationUser> optTrader = applicationUserRepository.findByFirstNameAndLastName(firstName, lastName);
-        if (optTrader.isEmpty()) {
-            result.addError("Trader must exist in the system");
-            return result;
-        }
-        if (!optTrader.get().isActive()) {
-            result.addError("Trader must be active in the system");
+        } else {
+            Optional<ApplicationUser> optTrader = applicationUserRepository.findByFirstNameIgnoreCase(traderName);
+            if (optTrader.isEmpty()) {
+                result.addError("Trader must exist in the system");
+            } else if (!optTrader.get().isActive()) {
+                result.addError("Trader must be active in the system");
+            }
         }
 
         // Validate book is active in the system
         String bookName = tradeDTO.getBookName();
         if (bookName == null) {
             result.addError("Book must be set");
-            return result;
-        }
-
-        Optional<Book> optBook = bookRepository.findByBookName(bookName);
-        if (optBook.isEmpty()) {
-            result.addError("Book must exist in the system");
-            return result;
-        }
-        if (!optBook.get().isActive()) {
-            result.addError("Book must be active in the system");
+        } else {
+            Optional<Book> optBook = bookRepository.findByBookName(bookName);
+            if (optBook.isEmpty()) {
+                result.addError("Book must exist in the system");
+            } else if (!optBook.get().isActive()) {
+                result.addError("Book must be active in the system");
+            }
         }
 
         // Validate counterparty is active in the system
         String counterpartyName = tradeDTO.getCounterpartyName();
         if (counterpartyName == null) {
             result.addError("Counterparty must be set");
-            return result;
+        } else {
+            Optional<Counterparty> optCounterparty = counterpartyRepository.findByName(counterpartyName);
+            if (optCounterparty.isEmpty()) {
+                result.addError("Counterparty must exist in the system");
+            } else if (!optCounterparty.get().isActive()) {
+                result.addError("Counterparty must be active in the system");
+            }
         }
 
-        Optional<Counterparty> optCounterparty = counterpartyRepository.findByName(counterpartyName);
-        if (optCounterparty.isEmpty()) {
-            result.addError("Counterparty must exist in the system");
-            return result;
-        }
-        if (!optCounterparty.get().isActive()) {
-            result.addError("Counterparty must be active in the system");
-        }
-         return result;
+        return result;
     }
 
     public ValidationResult validateTradeDTOReferenceData(TradeDTO tradeDTO) {

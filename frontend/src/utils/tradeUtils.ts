@@ -71,6 +71,10 @@ export const formatTradeForBackend = (trade: Trade): Record<string, unknown> => 
     };
 };
 
+// ⚠️ Temporary: UI validation disabled to exercise backend rules
+// Reason: Enhancement-2 (comprehensive trade validation engine)
+// TODO: Re-enable front-end validation once backend logic is fully verified
+
 /**
  * Validates a trade for completeness and required fields
  * @param trade - Trade to validate
@@ -78,25 +82,25 @@ export const formatTradeForBackend = (trade: Trade): Record<string, unknown> => 
  */
 export const validateTrade = (trade: Trade): string | null => {
     // Backend-required fields (tradeStatus is NOT required)
-    if (!trade.tradeDate) return "Trade date is required.";
-    if (!trade.bookName) return "Book is required.";
-    if (!trade.counterpartyName) return "Counterparty is required.";
-    if (!trade.tradeLegs || !Array.isArray(trade.tradeLegs) || trade.tradeLegs.length === 0) return "At least one trade leg is required.";
+    // if (!trade.tradeDate) return "Trade date is required.";
+    // if (!trade.bookName) return "Book is required.";
+    // if (!trade.counterpartyName) return "Counterparty is required.";
+    // if (!trade.tradeLegs || !Array.isArray(trade.tradeLegs) || trade.tradeLegs.length === 0) return "At least one trade leg is required.";
 
     // Validate all trade legs (basic presence)
-    for (let i = 0; i < trade.tradeLegs.length; i++) {
-        const leg = trade.tradeLegs[i];
-        if (!leg.legType) return `Leg ${i + 1}: Leg Type is required.`;
-        if (!leg.notional) return `Leg ${i + 1}: Notional is required.`;
-        if (!leg.currency) return `Leg ${i + 1}: Currency is required.`;
-        if (!leg.calculationPeriodSchedule) return `Leg ${i + 1}: Payment Frequency is required.`;
-        if (!leg.paymentBusinessDayConvention) return `Leg ${i + 1}: Payment BDC is required.`;
-        if (!leg.payReceiveFlag) return `Leg ${i + 1}: Pay/Rec is required.`;
-        if (leg.legType === 'Fixed' && (leg.rate === undefined || leg.rate === null || leg.rate === ''))
-            return `Leg ${i + 1}: Fixed Rate is required for Fixed leg.`;
-        if (leg.legType === 'Floating' && (!leg.index || leg.index === ''))
-            return `Leg ${i + 1}: Floating Rate Index is required for Floating leg.`;
-    }
+    // for (let i = 0; i < trade.tradeLegs.length; i++) {
+    //     const leg = trade.tradeLegs[i];
+    //     if (!leg.legType) return `Leg ${i + 1}: Leg Type is required.`;
+    //     if (!leg.notional) return `Leg ${i + 1}: Notional is required.`;
+    //     if (!leg.currency) return `Leg ${i + 1}: Currency is required.`;
+    //     if (!leg.calculationPeriodSchedule) return `Leg ${i + 1}: Payment Frequency is required.`;
+    //     if (!leg.paymentBusinessDayConvention) return `Leg ${i + 1}: Payment BDC is required.`;
+    //     if (!leg.payReceiveFlag) return `Leg ${i + 1}: Pay/Rec is required.`;
+    //     if (leg.legType === 'Fixed' && (leg.rate === undefined || leg.rate === null || leg.rate === ''))
+    //         return `Leg ${i + 1}: Fixed Rate is required for Fixed leg.`;
+    //     if (leg.legType === 'Floating' && (!leg.index || leg.index === ''))
+    //         return `Leg ${i + 1}: Floating Rate Index is required for Floating leg.`;
+    // }
     return null;
 };
 
