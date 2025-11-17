@@ -62,5 +62,14 @@ public ValidationResult validateTradeLegConsistency(List<TradeLegDTO> legs) -> p
 
 ## Enhancement 3: Trader Dashboard and Blotter System
 
+!validateUserPrivileges("view", actingUser, trade)
+
+public boolean validateUserPrivileges(String userId, String operation, TradeDTO tradeDTO) -> public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO)
+
+
+- after further consideration, this is the correct method signature: public boolean validateUserPrivileges(String userId, String operation, TradeDTO tradeDTO). Since MO can amend and view, and support can view, without the inputter being the same as the trader, loginID should be used instead 
+
+
+
 
 
