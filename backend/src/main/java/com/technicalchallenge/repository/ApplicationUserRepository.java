@@ -12,6 +12,7 @@ public interface ApplicationUserRepository extends JpaRepository<ApplicationUser
     Optional<ApplicationUser> findByLoginId(String loginId);
     Optional<ApplicationUser> findByFirstName(String firstName);
 
-    // ENHANCEMENT-2: USER PRIVILEGE ENFORCEMENT METHOD
+    // ENHANCEMENT: USER PRIVILEGE ENFORCEMENT
     Optional<ApplicationUser> findByFirstNameIgnoreCase(String firstName);
+    Optional<ApplicationUser> findByLoginIdIgnoreCase(String loginId);
 }

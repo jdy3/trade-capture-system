@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -51,9 +52,10 @@ public class TradeController {
                                      schema = @Schema(implementation = TradeDTO.class))),
         @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    public List<TradeDTO> getAllTrades() {
-        logger.info("Fetching all trades");
-        return tradeService.getAllTrades().stream()
+    public List<TradeDTO> getAllTrades(@Parameter(hidden = true) Authentication authentication) {
+        String loginId = authentication.getName();
+        logger.info("Fetching trades for user: {}", loginId);
+        return tradeService.getAllTrades(loginId).stream()
                 .map(tradeMapper::toDto)
                 .toList();
     }
@@ -71,8 +73,11 @@ public class TradeController {
     })
     public List<TradeDTO> searchTradesByCounterpartyName(
             @Parameter(description = "Trade counterparty", required = true)
-            @PathVariable(name = "name") String name) {
-        logger.debug("Fetching trades by counterparty: {}", name);
+            @PathVariable(name = "name") String name,
+            @Parameter(hidden = true) Authentication authentication) {
+        
+        String loginId = authentication.getName();
+        logger.debug("Fetching trades by counterparty: {}, for user: {}", name, loginId);
         return tradeService.searchTradesByCounterpartyName(name).stream()
                 .map(tradeMapper::toDto)
                 .toList();
@@ -90,14 +95,17 @@ public class TradeController {
     })
     public List<TradeDTO> searchTradesByBookName(
             @Parameter(description = "Trade book", required = true)
-            @PathVariable(name = "bookName") String bookName) {
-        logger.debug("Fetching trades by bookName: {}", bookName);
+            @PathVariable(name = "bookName") String bookName,
+            @Parameter(hidden = true) Authentication authentication) {
+
+        String loginId = authentication.getName();
+        logger.debug("Fetching trades by bookName: {}, for user: {}", bookName, loginId);
         return tradeService.searchTradesByBookName(bookName).stream()
                 .map(tradeMapper::toDto)
                 .toList();
     }
 
-    @GetMapping("/search/trader/{loginId}")
+    @GetMapping("/search/trader/{traderLoginId}")
     @Operation(summary = "Search trades by trader",
                description = "Retrieves trades by trader")
     @ApiResponses(value = {
@@ -109,9 +117,12 @@ public class TradeController {
     })
     public List<TradeDTO> searchTradesByTraderLoginId(
             @Parameter(description = "Trader login ID", required = true)
-            @PathVariable(name = "loginId") String loginId) {
-        logger.debug("Fetching trades by traderLoginId: {}", loginId);
-        return tradeService.searchTradesByTraderLoginId(loginId).stream()
+            @PathVariable(name = "traderLoginId") String traderLoginId,
+            @Parameter(hidden = true) Authentication authentication) {
+        
+        String actingLoginId = authentication.getName();
+        logger.debug("Fetching trades by traderLoginId: {}, for user: {}", traderLoginId, actingLoginId);
+        return tradeService.searchTradesByTraderLoginId(traderLoginId).stream()
                 .map(tradeMapper::toDto)
                 .toList();
     }
@@ -128,8 +139,11 @@ public class TradeController {
     })
     public List<TradeDTO> searchTradesByStatus(
             @Parameter(description = "Trade status", required = true)
-            @PathVariable(name = "tradeStatus") String tradeStatus) {
-        logger.debug("Fetching trades by tradeStatus: {}", tradeStatus);
+            @PathVariable(name = "tradeStatus") String tradeStatus,
+            @Parameter(hidden = true) Authentication authentication) {
+
+        String loginId = authentication.getName();
+        logger.debug("Fetching trades by tradeStatus: {}, for user: {}", tradeStatus, loginId);
         return tradeService.searchTradesByStatus(tradeStatus).stream()
                 .map(tradeMapper::toDto)
                 .toList();
@@ -149,8 +163,11 @@ public class TradeController {
             @Parameter(description = "Trade date from (yyyy-MM-dd)", required = true)
             @PathVariable(name = "tradeDateFrom") LocalDate tradeDateFrom,
             @Parameter(description = "Trade date to (yyyy-MM-dd)", required = true)
-            @PathVariable(name = "tradeDateTo") LocalDate tradeDateTo) {
-        logger.debug("Fetching trades by trade date between: {} and {}", tradeDateFrom, tradeDateTo);
+            @PathVariable(name = "tradeDateTo") LocalDate tradeDateTo,
+            @Parameter(hidden = true) Authentication authentication) {
+
+        String loginId = authentication.getName();
+        logger.debug("Fetching trades by trade date between: {} and {}, for user: {}", tradeDateFrom, tradeDateTo, loginId);
         return tradeService.searchTradesByDateBetween(tradeDateFrom, tradeDateTo).stream()
                 .map(tradeMapper::toDto)
                 .toList();
@@ -170,8 +187,11 @@ public class TradeController {
         @Parameter(description = "Page number (zero-based)", example = "0")
         @RequestParam(defaultValue = "0") int page,
         @Parameter(description = "Page size", example = "10")
-        @RequestParam(defaultValue = "20") int size) {
-        logger.debug("Retrieving all trades - page: {}, size: {}", page, size);
+        @RequestParam(defaultValue = "20") int size,
+        @Parameter(hidden = true) Authentication authentication) {
+
+        String loginId = authentication.getName();
+        logger.debug("Retrieving all trades for user: {} - page: {}, size: {}", loginId, page, size);
         Page<Trade> trades = tradeService.getAllTrades(page, size);
         return ResponseEntity.ok(trades.map(tradeMapper::toDto));
      }
@@ -188,14 +208,16 @@ public class TradeController {
      public ResponseEntity<Page<TradeDTO>> filterTrades(
         @RequestParam(required = false) String counterpartyName, 
         @RequestParam(required = false) String bookName, 
-        @RequestParam(required = false) String loginId, 
+        @RequestParam(required = false) String traderLoginId, 
         @RequestParam(required = false) String tradeStatus, 
         @RequestParam(required = false) LocalDate tradeDateFrom,
         @RequestParam(required = false) LocalDate tradeDateTo,
-        @Parameter(hidden = true)
-        Pageable pageable) {
-        logger.debug("Retrieving filtered trades by page");
-        Page<Trade> trades = tradeService.filterTrades(counterpartyName, bookName, loginId, tradeStatus, tradeDateFrom, tradeDateTo, pageable);
+        @Parameter(hidden = true) Pageable pageable,
+        @Parameter(hidden = true) Authentication authentication) {
+        
+        String actingLoginId = authentication.getName();
+        logger.debug("Retrieving filtered trades by page, for user: {}", actingLoginId);
+        Page<Trade> trades = tradeService.filterTrades(counterpartyName, bookName, traderLoginId, tradeStatus, tradeDateFrom, tradeDateTo, pageable, actingLoginId);
         return ResponseEntity.ok(trades.map(tradeMapper::toDto));
      }
 
@@ -213,8 +235,11 @@ public class TradeController {
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "tradeDate,desc") String sort) {
-        logger.debug("RSQL query recieved: {}", query);
+            @RequestParam(defaultValue = "tradeDate,desc") String sort,
+            @Parameter(hidden = true) Authentication authentication) {
+
+        String loginId = authentication.getName();
+        logger.debug("RSQL query recieved: {}, for user: {}", query, loginId);
         Page<Trade> trades = tradeService.searchByRsql(query, page, size, sort);
         return ResponseEntity.ok(trades.map(tradeMapper::toDto));
     }
@@ -231,8 +256,11 @@ public class TradeController {
     })
     public ResponseEntity<TradeDTO> getTradeById(
             @Parameter(description = "Unique identifier of the trade", required = true)
-            @PathVariable(name = "id") Long id) {
-        logger.debug("Fetching trade by id: {}", id);
+            @PathVariable(name = "id") Long id,
+            @Parameter(hidden = true) Authentication authentication) {
+        
+        String loginId = authentication.getName();
+        logger.debug("Fetching trade by id: {}, for user: {}", id, loginId);
         return tradeService.getTradeById(id)
                 .map(tradeMapper::toDto)
                 .map(ResponseEntity::ok)
@@ -251,10 +279,12 @@ public class TradeController {
     })
     public ResponseEntity<?> createTrade(
             @Parameter(description = "Trade details for creation", required = true)
-            @Valid @RequestBody TradeDTO tradeDTO) {
+            @Valid @RequestBody TradeDTO tradeDTO,
+            @Parameter(hidden = true) Authentication authentication) {
         logger.info("Creating new trade: {}", tradeDTO);
-        
-            Trade savedTrade = tradeService.createTrade(tradeDTO);
+            
+            String loginId = authentication.getName();
+            Trade savedTrade = tradeService.createTrade(tradeDTO, loginId);
             TradeDTO responseDTO = tradeMapper.toDto(savedTrade);
             return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);        
     }
@@ -272,23 +302,16 @@ public class TradeController {
     })
     public ResponseEntity<?> updateTrade(
             @Parameter(description = "Unique identifier of the trade to update", required = true)
-            @PathVariable Long id,
+            @PathVariable("id") Long tradeId,
             @Parameter(description = "Updated trade details", required = true)
-            @Valid @RequestBody TradeDTO tradeDTO) {
-        logger.info("Updating trade with id: {}", id);
-        try {
-            // Validate IDs match instead of overriding tradeDTO tradeId with path id
-            if (tradeDTO.getTradeId() != null && !tradeDTO.getTradeId().equals(id)) {
-                return ResponseEntity.badRequest().body("Trade ID in path must match Trade ID in request body");
-            }
-            tradeDTO.setTradeId(id); // Set if null
-            Trade amendedTrade = tradeService.amendTrade(id, tradeDTO);
+            @Valid @RequestBody TradeDTO tradeDTO,
+            @Parameter(hidden = true) Authentication authentication) {
+        logger.info("Updating trade with id: {}", tradeId);
+        
+            String loginId = authentication.getName();
+            Trade amendedTrade = tradeService.amendTrade(tradeId, tradeDTO, loginId);
             TradeDTO responseDTO = tradeMapper.toDto(amendedTrade);
             return ResponseEntity.ok(responseDTO);
-        } catch (Exception e) {
-            logger.error("Error updating trade: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error updating trade: " + e.getMessage());
-        }
     }
 
     @DeleteMapping("/{id}")
@@ -302,15 +325,13 @@ public class TradeController {
     })
     public ResponseEntity<?> deleteTrade(
             @Parameter(description = "Unique identifier of the trade to delete", required = true)
-            @PathVariable Long id) {
+            @PathVariable Long id, 
+            @Parameter(hidden = true) Authentication authentication) {
         logger.info("Deleting trade with id: {}", id);
-        try {
-            tradeService.deleteTrade(id);
+        
+            String loginId = authentication.getName();
+            tradeService.deleteTrade(id, loginId);
             return ResponseEntity.ok().body("Trade cancelled successfully");
-        } catch (Exception e) {
-            logger.error("Error deleting trade: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error deleting trade: " + e.getMessage());
-        }
     }
 
     @PostMapping("/{id}/terminate")
@@ -326,16 +347,14 @@ public class TradeController {
     })
     public ResponseEntity<?> terminateTrade(
             @Parameter(description = "Unique identifier of the trade to terminate", required = true)
-            @PathVariable Long id) {
+            @PathVariable Long id, 
+            @Parameter(hidden = true) Authentication authentication) {
         logger.info("Terminating trade with id: {}", id);
-        try {
-            Trade terminatedTrade = tradeService.terminateTrade(id);
+        
+            String loginId = authentication.getName();
+            Trade terminatedTrade = tradeService.terminateTrade(id, loginId);
             TradeDTO responseDTO = tradeMapper.toDto(terminatedTrade);
             return ResponseEntity.ok(responseDTO);
-        } catch (Exception e) {
-            logger.error("Error terminating trade: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error terminating trade: " + e.getMessage());
-        }
     }
 
     @PostMapping("/{id}/cancel")
@@ -351,15 +370,13 @@ public class TradeController {
     })
     public ResponseEntity<?> cancelTrade(
             @Parameter(description = "Unique identifier of the trade to cancel", required = true)
-            @PathVariable Long id) {
+            @PathVariable Long id, 
+            @Parameter(hidden = true) Authentication authentication) {
         logger.info("Cancelling trade with id: {}", id);
-        try {
-            Trade cancelledTrade = tradeService.cancelTrade(id);
+        
+            String loginId = authentication.getName();
+            Trade cancelledTrade = tradeService.cancelTrade(id, loginId);
             TradeDTO responseDTO = tradeMapper.toDto(cancelledTrade);
             return ResponseEntity.ok(responseDTO);
-        } catch (Exception e) {
-            logger.error("Error cancelling trade: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body("Error cancelling trade: " + e.getMessage());
-        }
     }
 }

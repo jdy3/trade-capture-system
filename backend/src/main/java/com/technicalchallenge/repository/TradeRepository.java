@@ -41,4 +41,7 @@ public interface TradeRepository extends JpaRepository<Trade, Long>, JpaSpecific
 
     @Query("SELECT t FROM Trade t WHERE t.tradeStatus.tradeStatus = :tradeStatus")
     List<Trade> findByTradeStatus(@Param("tradeStatus") String tradeStatus);
+
+    //ENHANCEMENT-3: AUTHENTICATED USER SEES ONLY THEIR RELEVANT TRADES
+    List<Trade> findByTraderUser_LoginIdIgnoreCase(String loginId);
 }

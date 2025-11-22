@@ -61,13 +61,15 @@ public ValidationResult validateTradeLegConsistency(List<TradeLegDTO> legs) -> p
 
 
 ## Enhancement 3: Trader Dashboard and Blotter System
+- Introduced the Authentication object to TradeController using loginId to enforce user-specific access for personalised trader dashboards.
 
-!validateUserPrivileges("view", actingUser, trade)
+- Refactored validateUserPrivileges() to accept an ApplicationUser authentication object, and integrated it into TradeService write methods to properly enforce user privileges for create/amend/terminate/cancel operations.
 
-public boolean validateUserPrivileges(String userId, String operation, TradeDTO tradeDTO) -> public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO)
+- public Trade saveTrade(Trade trade, TradeDTO tradeDTO) was removed because it is no longer used by any controllers.
 
+- Removed manual try-catch blocks from TradeController write operations to align with createTrade() and delegate error handling to the global exception handler.
 
-- after further consideration, this is the correct method signature: public boolean validateUserPrivileges(String userId, String operation, TradeDTO tradeDTO). Since MO can amend and view, and support can view, without the inputter being the same as the trader, loginID should be used instead 
+- The trade ID consistency check was moved from TradeController to TradeService to improve separation of concerns.
 
 
 

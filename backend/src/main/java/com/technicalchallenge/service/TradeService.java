@@ -10,7 +10,9 @@ import com.technicalchallenge.repository.*;
 import com.technicalchallenge.validation.TradeValidator;
 import com.technicalchallenge.validation.ValidationResult;
 import com.technicalchallenge.exception.TradeAuthorizationException;
+import com.technicalchallenge.exception.TradeNotFoundException;
 import com.technicalchallenge.exception.TradeValidationException;
+import com.technicalchallenge.mapper.TradeMapper;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -72,11 +74,20 @@ public class TradeService {
     @Autowired
     private TradeValidator tradeValidator;
     @Autowired
+    private TradeMapper tradeMapper;
+    @Autowired
     private AdditionalInfoService additionalInfoService;
 
-    public List<Trade> getAllTrades() {
-        logger.info("Retrieving all trades");
-        return tradeRepository.findAll();
+    public List<Trade> getAllTrades(String loginId) {
+        ApplicationUser actingUser = applicationUserRepository.findByLoginIdIgnoreCase(loginId).orElseThrow(() -> new TradeAuthorizationException("User not found for loginId: " + loginId));
+        logger.info("Retrieving trades for user: {}", loginId);
+
+        String userType = actingUser.getUserProfile().getUserType().trim().toUpperCase();
+
+        if (userType.equals("Trader_SALES")) {
+            return tradeRepository.findByTraderUser_LoginIdIgnoreCase(loginId);
+        }
+        else return tradeRepository.findAll();
     }
 
     //ENHANCEMENT-1: MULTI-CRITERIA SEARCH METHODS
@@ -112,7 +123,7 @@ public class TradeService {
         return tradeRepository.findAll(pageable);
     }
 
-    public Page<Trade> filterTrades(String counterpartyName, String bookName, String loginId, String tradeStatus, LocalDate tradeDateFrom, LocalDate tradeDateTo, Pageable pageable) {
+    public Page<Trade> filterTrades(String counterpartyName, String bookName, String loginId, String tradeStatus, LocalDate tradeDateFrom, LocalDate tradeDateTo, Pageable pageable, String actingLoginId) {
         Specification<Trade> spec = Specification.where(null);
 
         if (counterpartyName != null) {
@@ -176,10 +187,11 @@ public class TradeService {
     }
 
     @Transactional
-    public Trade createTrade(TradeDTO tradeDTO) {
-
-        if (!validateUserPrivileges("create", tradeDTO)) {
-        throw new TradeAuthorizationException("User does not have privileges for this operation.");
+    public Trade createTrade(TradeDTO tradeDTO, String loginId) {
+        ApplicationUser actingUser = applicationUserRepository.findByLoginIdIgnoreCase(loginId).orElseThrow(() -> new TradeAuthorizationException("User not found for loginId: " + loginId));
+        
+        if (!validateUserPrivileges(actingUser, "create", tradeDTO)) {
+        throw new TradeAuthorizationException("User does not have privileges to create this trade.");
         }
 
         logger.info("Creating new trade with ID: {}", tradeDTO.getTradeId());
@@ -220,53 +232,30 @@ public class TradeService {
     }
 
     // ENHANCEMENT-2: USER PRIVILEGE ENFORCEMENT METHOD
-    public boolean validateUserPrivileges(String operation, TradeDTO tradeDTO) {
-        logger.info("InputterUserName: {}", tradeDTO.getInputterUserName());
+    public boolean validateUserPrivileges(ApplicationUser actingUser, String operation, TradeDTO tradeDTO) {
+        logger.info("loginId: {}", actingUser.getLoginId());
         logger.info("Operation: {}", operation);
         logger.info("TraderUserName: {}", tradeDTO.getTraderUserName());
 
-        String inputterUserName = tradeDTO.getInputterUserName();
-        if (inputterUserName == null) return false;
-
-        Optional<ApplicationUser> optUser = applicationUserRepository.findByFirstNameIgnoreCase(inputterUserName);
-
-        if (optUser.isEmpty()) return false;
+        UserProfile userProfile = actingUser.getUserProfile();
+        if (userProfile == null || userProfile.getUserType() == null) {
+            return false;
+        }
         
-        ApplicationUser user = optUser.get();
-        UserProfile userProfile = user.getUserProfile();
-        String userType = userProfile.getUserType();
-
+        String userType = userProfile.getUserType().trim().toUpperCase();
         String op = operation.trim().toLowerCase();
 
-        // TRADERS: Can create, amend, terminate, cancel and view their own trades
-        if (userType.equalsIgnoreCase("TRADER_SALES") && inputterUserName.equalsIgnoreCase(tradeDTO.getTraderUserName())) {
-            return op.equals("create") || op.equals("amend") || op.equals("terminate") || op.equals("cancel") || op.equals("view");
+        // TRADERS: Can create, amend, terminate, cancel their own trades
+        if (userType.equals("TRADER_SALES") && actingUser.getLoginId() != null && tradeDTO.getTraderUserName() != null && actingUser.getLoginId().equalsIgnoreCase(tradeDTO.getTraderUserName())) {
+            return op.equals("create") || op.equals("amend") || op.equals("terminate") || op.equals("cancel");
         }
 
-        // MIDDLE_OFFICE: can amend and view only
-        if (userType.equalsIgnoreCase("MO") || userType.equalsIgnoreCase("MIDDLE_OFFICE")) {
-            return op.equals("amend") || op.equals("view");
-        }
-
-        // SUPPORT: Can view only
-        if (userType.equalsIgnoreCase("SUPPORT")) {
-            return op.equals("view");
+        // MIDDLE_OFFICE: can amend trades
+        if (userType.equals("MO") || userType.equals("MIDDLE_OFFICE")) {
+            return op.equals("amend");
         }
         
         return false;
-    }
-
-    // NEW METHOD: For controller compatibility
-    @Transactional
-    public Trade saveTrade(Trade trade, TradeDTO tradeDTO) {
-        logger.info("Saving trade with ID: {}", trade.getTradeId());
-
-        // If this is an existing trade (has ID), handle as amendment
-        if (trade.getId() != null) {
-            return amendTrade(trade.getTradeId(), tradeDTO);
-        } else {
-            return createTrade(tradeDTO);
-        }
     }
 
     // FIXED: Populate reference data by names from DTO
@@ -399,21 +388,31 @@ public class TradeService {
 
     // NEW METHOD: Delete trade (mark as cancelled)
     @Transactional
-    public void deleteTrade(Long tradeId) {
+    public void deleteTrade(Long tradeId, String loginId) {
         logger.info("Deleting (cancelling) trade with ID: {}", tradeId);
-        cancelTrade(tradeId);
+        cancelTrade(tradeId, loginId);
     }
 
     @Transactional
-    public Trade amendTrade(Long tradeId, TradeDTO tradeDTO) {
-        logger.info("Amending trade with ID: {}", tradeId);
+    public Trade amendTrade(Long tradeId, TradeDTO tradeDTO, String loginId) {
 
-        Optional<Trade> existingTradeOpt = getTradeById(tradeId);
-        if (existingTradeOpt.isEmpty()) {
-            throw new RuntimeException("Trade not found: " + tradeId);
+        // ENHANCEMENT: MOVE ID CONSISTENCY ENFORCEMENT FROM CONTROLLER TO SERVICE
+        if (tradeDTO.getTradeId() != null && !tradeDTO.getTradeId().equals(tradeId)) {
+        throw new TradeValidationException("Trade ID in path must match Trade ID in request body");
         }
 
-        Trade existingTrade = existingTradeOpt.get();
+        tradeDTO.setTradeId(tradeId);
+
+        ApplicationUser actingUser = applicationUserRepository.findByLoginIdIgnoreCase(loginId).orElseThrow(() -> new TradeAuthorizationException("User not found for loginId: " + loginId));
+
+        Trade existingTrade = getTradeById(tradeId).orElseThrow(() -> new TradeNotFoundException("Trade not found:" + tradeId));
+        TradeDTO existingTradeDTO = tradeMapper.toDto(existingTrade);
+                
+        if (!validateUserPrivileges(actingUser, "amend", existingTradeDTO)) {
+        throw new TradeAuthorizationException("User does not have privileges to amend this trade.");
+        }
+
+        logger.info("Amending trade with ID: {}", tradeId);
 
         // Deactivate existing trade
         existingTrade.setActive(false);
@@ -431,6 +430,11 @@ public class TradeService {
         // Populate reference data
         populateReferenceDataByName(amendedTrade, tradeDTO);
 
+
+        // ENHANCEMENT: HARDENING - prevent trader reassignment via DTO
+        // Always keep the original trader user
+        amendedTrade.setTraderUser(existingTrade.getTraderUser());
+
         // Set status to AMENDED
         TradeStatus amendedStatus = tradeStatusRepository.findByTradeStatus("AMENDED")
                 .orElseThrow(() -> new RuntimeException("AMENDED status not found"));
@@ -446,37 +450,43 @@ public class TradeService {
     }
 
     @Transactional
-    public Trade terminateTrade(Long tradeId) {
-        logger.info("Terminating trade with ID: {}", tradeId);
+    public Trade terminateTrade(Long tradeId, String loginId) {
+        ApplicationUser actingUser = applicationUserRepository.findByLoginIdIgnoreCase(loginId).orElseThrow(() -> new TradeAuthorizationException("User not found for loginId: " + loginId));
 
-        Optional<Trade> tradeOpt = getTradeById(tradeId);
-        if (tradeOpt.isEmpty()) {
-            throw new RuntimeException("Trade not found: " + tradeId);
+        Trade existingTrade = getTradeById(tradeId).orElseThrow(() -> new TradeNotFoundException("Trade not found:" + tradeId));
+        TradeDTO existingTradeDTO = tradeMapper.toDto(existingTrade);
+                
+        if (!validateUserPrivileges(actingUser, "terminate", existingTradeDTO)) {
+        throw new TradeAuthorizationException("User does not have privileges to terminate this trade.");
         }
 
-        Trade trade = tradeOpt.get();
+        logger.info("Terminating trade with ID: {}", tradeId);
+
         TradeStatus terminatedStatus = tradeStatusRepository.findByTradeStatus("TERMINATED")
                 .orElseThrow(() -> new RuntimeException("TERMINATED status not found"));
 
-        trade.setTradeStatus(terminatedStatus);
-        trade.setLastTouchTimestamp(LocalDateTime.now());
+        existingTrade.setTradeStatus(terminatedStatus);
+        existingTrade.setLastTouchTimestamp(LocalDateTime.now());
 
-        return tradeRepository.save(trade);
+        return tradeRepository.save(existingTrade);
     }
 
     @Transactional
-    public Trade cancelTrade(Long tradeId) {
-        logger.info("Cancelling trade with ID: {}", tradeId);
+    public Trade cancelTrade(Long tradeId, String loginId) {
+        ApplicationUser actingUser = applicationUserRepository.findByLoginIdIgnoreCase(loginId).orElseThrow(() -> new TradeAuthorizationException("User not found for loginId: " + loginId));
 
-        Optional<Trade> tradeOpt = getTradeById(tradeId);
-        if (tradeOpt.isEmpty()) {
-            throw new RuntimeException("Trade not found: " + tradeId);
+        Trade trade = getTradeById(tradeId).orElseThrow(() -> new TradeNotFoundException("Trade not found:" + tradeId));
+        TradeDTO tradeDTO = tradeMapper.toDto(trade);
+                
+        if (!validateUserPrivileges(actingUser, "cancel", tradeDTO)) {
+        throw new TradeAuthorizationException("User does not have privileges to cancel this trade.");
         }
 
-        Trade trade = tradeOpt.get();
+        logger.info("Cancelling trade with ID: {}", tradeId);
+
         TradeStatus cancelledStatus = tradeStatusRepository.findByTradeStatus("CANCELLED")
                 .orElseThrow(() -> new RuntimeException("CANCELLED status not found"));
-
+        
         trade.setTradeStatus(cancelledStatus);
         trade.setLastTouchTimestamp(LocalDateTime.now());
 
